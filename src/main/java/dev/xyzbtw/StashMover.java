@@ -97,9 +97,16 @@ public class StashMover extends ToggleableModule {
 	private void onUpdate(EventUpdate event) {
 		if(mc.player == null || mc.level == null) return;
 
-		if(pearlChestPosition == null || walkToPosition == null || chestForLoot == null){
-			ChatUtils.print("One of your positions isn't set big boy");
-			return;
+		if(mode.getValue().equals(MODES.MOVER)){
+			if(pearlChestPosition == null || chestForLoot==null || walkToPosition == null){
+				ChatUtils.print("One of your positions isn't set big boy");
+				return;
+			}
+		}else{
+			if(walkToPosition==null){
+				ChatUtils.print("One of your positions isn't set big boy");
+				return;
+			}
 		}
 
 		if(lagTimer.passed(1000)) return;
