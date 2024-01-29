@@ -1,0 +1,12 @@
+{
+  "Plugin-Class": "dev.xyzbtw.MoverPlugin",
+  "Name": "StashMover",
+  "Version": "${plugin_version}",
+  "Description": "Moves stashes using pearls and a bed",
+  "Authors": [
+    "xyzbtw"
+  ],
+  "Minecraft-Versions": [
+    "1.20.1"
+  ]
+}
