@@ -5,6 +5,7 @@ import dev.xyzbtw.utils.InventoryUtil;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket;
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
@@ -123,7 +124,7 @@ public class StashMover extends ToggleableModule {
                         }
 						case WAIT_FOR_PEARL -> {
 							if(mc.player.distanceToSqr(pearlChestPosition.getX(), pearlChestPosition.getY(), pearlChestPosition.getZ()) > 9){
-								BaritoneUtil.goTo(pearlChestPosition.above());
+								BaritoneUtil.goTo(freeBlockAroundChest(pearlChestPosition));
 								return;
 							}
 
@@ -186,7 +187,7 @@ public class StashMover extends ToggleableModule {
 						case WALKING_TO_CHEST -> {
 
 							if(mc.player.distanceToSqr(chestForLoot.getX(), chestForLoot.getY(), chestForLoot.getZ()) > 9){
-								BaritoneUtil.goTo(chestForLoot.above());
+								BaritoneUtil.goTo(freeBlockAroundChest(chestForLoot));
 								return;
 							}
 							if(!(mc.screen instanceof AbstractContainerScreen handler)){
@@ -371,6 +372,20 @@ public class StashMover extends ToggleableModule {
 		return closestChest;
 	}
 
+	public BlockPos freeBlockAroundChest(BlockPos pos){
+		for(Direction direction : Direction.values()){
+			if(direction == Direction.DOWN || direction == Direction.UP){
+				continue;
+			}
+			BlockPos offsetPos = pos.relative(direction, 1);
+
+			if(!mc.level.getBlockState(offsetPos).isAir()) continue;
+			if(mc.level.getBlockState(offsetPos.below()).isAir()) continue;
+
+			return offsetPos;
+		}
+		return pos.above();
+	}
 
 	boolean isRotated(){
 		return RusherHackAPI.getServerState().getPlayerPitch() == rotatePitch.getValue() && RusherHackAPI.getServerState().getPlayerYaw() == rotateYaw.getValue();
