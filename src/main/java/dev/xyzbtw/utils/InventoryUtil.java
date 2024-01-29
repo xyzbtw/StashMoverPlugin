@@ -35,5 +35,14 @@ public class InventoryUtil {
         }
         return true;
     }
+    public static boolean isInventoryEmpty() {
+        boolean empty = true;
+        for (int i = 0; i < 36; i++) {
+            if (!mc.player.getInventory().getItem(i).isEmpty()) {
+                empty = false;
+            }
+        }
+        return empty;
+    }
 
 }

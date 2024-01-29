@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="baritone-unoptimized-fabric-1.10.2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/libs/baritone-unoptimized-fabric-1.10.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

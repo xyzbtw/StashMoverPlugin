@@ -1,6 +1,5 @@
 package dev.xyzbtw.utils;
 
-import baritone.Baritone;
 import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.pathing.goals.GoalGetToBlock;

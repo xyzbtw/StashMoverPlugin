@@ -17,7 +17,6 @@ repositories {
     // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html
     // for more information about repositories.
-
     maven {
         name = "rusherhack"
         //releases repository will have the latest api version for last stable rusherhack release
@@ -35,11 +34,14 @@ repositories {
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
+
     //mojmap + parchment mappings
     mappings loom.layered() {
         officialMojangMappings()
         parchment("org.parchmentmc.data:parchment-1.20.1:2023.07.30@zip")
     }
+
+    modCompileOnly files("libs/baritone-api-fabric.jar")
 
     //rusherhack api
     rusherhackApi "org.rusherhack:rusherhack-api:1.20.1-SNAPSHOT"
