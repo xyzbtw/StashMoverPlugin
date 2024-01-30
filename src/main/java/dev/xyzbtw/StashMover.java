@@ -30,6 +30,7 @@ import org.rusherhack.client.api.utils.RotationUtils;
 import org.rusherhack.client.api.utils.WorldUtils;
 import org.rusherhack.core.command.annotations.CommandExecutor;
 import org.rusherhack.core.event.subscribe.Subscribe;
+import org.rusherhack.core.notification.NotificationType;
 import org.rusherhack.core.setting.BooleanSetting;
 import org.rusherhack.core.setting.EnumSetting;
 import org.rusherhack.core.setting.NumberSetting;
@@ -101,12 +102,13 @@ public class StashMover extends ToggleableModule {
 
 		if(mode.getValue().equals(MODES.MOVER)){
 			if(pearlChestPosition == null || chestForLoot==null || walkToPosition == null){
-				ChatUtils.print("One of your positions isn't set big boy");
+				RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
+
 				return;
 			}
 		}else{
 			if(walkToPosition==null){
-				ChatUtils.print("One of your positions isn't set big boy");
+				RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
 				return;
 			}
 		}
