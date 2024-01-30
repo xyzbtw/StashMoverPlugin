@@ -26,6 +26,7 @@ import org.rusherhack.client.api.feature.module.ModuleCategory;
 import org.rusherhack.client.api.feature.module.ToggleableModule;
 import org.rusherhack.client.api.utils.ChatUtils;
 import org.rusherhack.client.api.utils.InventoryUtils;
+import org.rusherhack.client.api.utils.RotationUtils;
 import org.rusherhack.client.api.utils.WorldUtils;
 import org.rusherhack.core.command.annotations.CommandExecutor;
 import org.rusherhack.core.event.subscribe.Subscribe;
@@ -53,12 +54,6 @@ public class StashMover extends ToggleableModule {
 	private final NumberSetting<Integer> delay = new NumberSetting<>("Delay", "Delay between like thingy things in ticks", 50, 0, 300);
 	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay betweenc chest clicks", 2, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final BooleanSetting is2b = new BooleanSetting("2b2t", "Changes chatpackets from player to system", true);
-	private final NumberSetting<Float> rotateYaw = new NumberSetting<>("Yaw", 0f, 0f, 360f)
-			.incremental(0.1f)
-			.setVisibility(()-> mode.getValue().equals(MODES.MOVER));
-	private final NumberSetting<Float> rotatePitch = new NumberSetting<>("Pitch", 0f, -90f, 90f)
-			.incremental(0.1f)
-			.setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final NumberSetting<Float> rotateStep = new NumberSetting<>("RotationStep", 40f, 0f, 180f)
 			.incremental(0.1f)
 			.setVisibility(()-> mode.getValue().equals(MODES.MOVER));
@@ -77,6 +72,12 @@ public class StashMover extends ToggleableModule {
 	Timer lagTimer = new Timer();
 
 	/**
+	 * rotations[0] is pitch
+	 * rotations[1] is yaw
+	 */
+	float[] rotations = null;
+
+	/**
 	 * constructor
 	 */
 	public StashMover() {
@@ -86,8 +87,6 @@ public class StashMover extends ToggleableModule {
 				this.delay,
 				this.chestDelay,
 				this.is2b,
-				this.rotateYaw,
-				this.rotatePitch,
 				this.rotateStep,
 				this.otherIGN
 		);
@@ -317,6 +316,14 @@ public class StashMover extends ToggleableModule {
 
 				return "Set position to current position";
 			}
+			@CommandExecutor(subCommand = "rotations")
+			private String setRotations(){
+				if(mc.level == null || mc.player==null || mc.getCameraEntity() == null) return "Not in a world";
+				rotations[0] = RusherHackAPI.getServerState().getPlayerPitch();
+				rotations[1] = RusherHackAPI.getServerState().getPlayerYaw();
+
+				return "Set rotations." + " Yaw: " + rotations[1] + ". Pitch: " + rotations[0];
+			}
 
 		};
 	}
@@ -336,7 +343,7 @@ public class StashMover extends ToggleableModule {
 	protected void throwPearl(){
 		if(hasThrownPearl) return;
 
-		rotate(rotateYaw.getValue(), rotatePitch.getValue(), rotateStep.getValue());
+		rotate(rotations[1], rotations[0], rotateStep.getValue());
 
         if (!InventoryUtil.isHolding(Items.ENDER_PEARL)) {
             int slot = InventoryUtils.findItemHotbar(Items.ENDER_PEARL);
@@ -395,7 +402,7 @@ public class StashMover extends ToggleableModule {
 	}
 
 	boolean isRotated(){
-		return RusherHackAPI.getServerState().getPlayerPitch() == rotatePitch.getValue() && RusherHackAPI.getServerState().getPlayerYaw() == rotateYaw.getValue();
+		return RusherHackAPI.getServerState().getPlayerPitch() == rotations[0] && RusherHackAPI.getServerState().getPlayerYaw() == rotations[1];
 	}
 	boolean isRotated(BlockPos pos){
 		return RusherHackAPI.getRotationManager().isLookingAt(pos);
