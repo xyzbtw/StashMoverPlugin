@@ -272,32 +272,37 @@ public class StashMover extends ToggleableModule {
 			}
 		}
 	}
+	protected String getLookPos(String string){
+		BlockPos lookPos = null;
+		if(mc.level!=null) {
+			if (mc.hitResult == null) return "No hitresult, look at the block";
+
+			if (mc.hitResult.getType() != HitResult.Type.BLOCK) return "You're not looking at a block big boy";
+
+
+			lookPos = new BlockPos((int) mc.hitResult.getLocation().x, (int)mc.hitResult.getLocation().y,(int) mc.hitResult.getLocation().z);
+
+
+			if(string.equalsIgnoreCase("pearlchest")) {
+				StashMover.pearlChestPosition = lookPos;
+			}else if (string.equalsIgnoreCase("lootchest"))
+				StashMover.chestForLoot = lookPos;
+			else{
+				return "USAGE: *stashmover chest pearlchest OR *stashmover chest lootchest";
+			}
+		}
+		return lookPos==null ? "You're not in a world??" : "Successfully set to the pos you were looking at";
+	}
 	@Override
 	public ModuleCommand createCommand() {
 		return new ModuleCommand(this) {
-			@CommandExecutor(subCommand = "chest")
-			@CommandExecutor.Argument("string")
-			private String setPearlChestPos(String string) {
-				BlockPos lookPos = null;
-				if(mc.level!=null) {
-					if (mc.hitResult == null) return "No hitresult, look at the block";
-
-					if (mc.hitResult.getType() != HitResult.Type.BLOCK) return "You're not looking at a block big boy";
-
-
-					lookPos = new BlockPos((int) mc.hitResult.getLocation().x, (int)mc.hitResult.getLocation().y,(int) mc.hitResult.getLocation().z);
-
-
-					if(string.equalsIgnoreCase("pearlchest")) {
-						StashMover.pearlChestPosition = lookPos;
-					}else if (string.equalsIgnoreCase("lootchest"))
-						StashMover.chestForLoot = lookPos;
-					else{
-						return "USAGE: *stashmover chest pearlchest OR *stashmover chest lootchest";
-					}
-				}
-
-				return lookPos==null ? "You're not in a world??" : "Successfully set " + string +  " to the pos you were looking at";
+			@CommandExecutor(subCommand = "pearlchest")
+			private String setPearlChestPos() {
+				return getLookPos("pearlchest");
+			}
+			@CommandExecutor(subCommand = "lootchest")
+			private String setLootChestPos() {
+				return getLookPos("lootchest");
 			}
 
 			@CommandExecutor(subCommand = "walkPos")
