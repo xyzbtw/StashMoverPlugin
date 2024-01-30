@@ -50,7 +50,7 @@ public class StashMover extends ToggleableModule {
 	 * Settings
 	 */
 	private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
-	private final NumberSetting<Integer> delay = new NumberSetting<>("Delay", "Delay between like thingy things in ticks", 5, 0, 60);
+	private final NumberSetting<Integer> delay = new NumberSetting<>("Delay", "Delay between like thingy things in ticks", 50, 0, 300);
 	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay betweenc chest clicks", 2, 0, 10);
 	private final BooleanSetting is2b = new BooleanSetting("2b2t", "Changes chatpackets from player to system", true);
 	private final NumberSetting<Float> rotateYaw = new NumberSetting<>("Yaw", 0f, 0f, 360f)
@@ -84,10 +84,12 @@ public class StashMover extends ToggleableModule {
 		this.registerSettings(
 				this.mode,
 				this.delay,
+				this.chestDelay,
 				this.is2b,
 				this.rotateYaw,
 				this.rotatePitch,
-				this.rotateStep
+				this.rotateStep,
+				this.otherIGN
 		);
 	}
 	/**
