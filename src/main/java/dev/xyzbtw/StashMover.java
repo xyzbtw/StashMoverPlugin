@@ -29,6 +29,7 @@ import org.rusherhack.client.api.utils.InventoryUtils;
 import org.rusherhack.client.api.utils.WorldUtils;
 import org.rusherhack.core.command.annotations.CommandExecutor;
 import org.rusherhack.core.event.subscribe.Subscribe;
+import org.rusherhack.core.notification.NotificationType;
 import org.rusherhack.core.setting.BooleanSetting;
 import org.rusherhack.core.setting.EnumSetting;
 import org.rusherhack.core.setting.NumberSetting;
@@ -50,8 +51,8 @@ public class StashMover extends ToggleableModule {
 	 * Settings
 	 */
 	private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
-	private final NumberSetting<Integer> delay = new NumberSetting<>("Delay", "Delay between like thingy things in ticks", 50, 0, 300);
-	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay betweenc chest clicks", 2, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
+	private final NumberSetting<Integer> delay = new NumberSetting<>("Delay", "Delay between like thingy things in seconds", 5, 0, 60);
+	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay betweenc chest clicks in ticks", 2, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final BooleanSetting is2b = new BooleanSetting("2b2t", "Changes chatpackets from player to system", true);
 	private final NumberSetting<Float> rotateStep = new NumberSetting<>("RotationStep", 40f, 0f, 180f)
 			.incremental(0.1f)
@@ -65,10 +66,11 @@ public class StashMover extends ToggleableModule {
 	private MOVER moverStatus = MOVER.WAIT_FOR_PEARL;
 	private LOADER loaderStatus = LOADER.WAITING;
 	boolean hasThrownPearl = false;
-	int ticksPassed, chestTicks = 0;
+	int chestTicks = 0;
 	String LOADPEARLMSG = "LOAD PEARL";
 	public static BlockPos walkToPosition, LOADER_BACK_POSITION, pearlChestPosition, chestForLoot;
 	Timer lagTimer = new Timer();
+	Timer delayTimer = new Timer();
 	/**
 	 * rotations[0] is pitch
 	 * rotations[1] is yaw
@@ -100,12 +102,12 @@ public class StashMover extends ToggleableModule {
 
 		if(mode.getValue().equals(MODES.MOVER)){
 			if(pearlChestPosition == null || chestForLoot==null || walkToPosition == null){
-				ChatUtils.print("One of your positions isn't set big boy");
+				RusherHackAPI.getNotificationManager().send(NotificationType.ERROR,"One of your positions isn't set big boy" );
 				return;
 			}
 		}else{
 			if(walkToPosition==null){
-				ChatUtils.print("One of your positions isn't set big boy");
+				RusherHackAPI.getNotificationManager().send(NotificationType.ERROR,"One of your positions isn't set big boy" );
 				return;
 			}
 		}
@@ -113,9 +115,7 @@ public class StashMover extends ToggleableModule {
 		if(lagTimer.passed(1000)) return;
 
 
-		ticksPassed++;
-
-		if(ticksPassed>delay.getValue()) {
+		if(delayTimer.passed(delay.getValue() * 1000)) {
 			switch (mode.getValue()) {
 				case MOVER -> {
 					switch (moverStatus) {
@@ -230,7 +230,7 @@ public class StashMover extends ToggleableModule {
 				}
 			}
 
-			ticksPassed=0;
+			delayTimer.reset();
 		}
 	}
 
