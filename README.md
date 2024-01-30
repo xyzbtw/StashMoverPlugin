@@ -3,6 +3,7 @@ Loader
 
 Set the position where you want it to walk TOWARDS to load your pearl using *stashmover walkpos
 Set the ign of the other account where you're using mover mode. 
+Also quick note, enable the stashmover in the position where you want it to walk back to, so like, you enable it at the stash, it sets your position there, walks to load pearl, and goes back to that pos.
 
 Mover
 --------
