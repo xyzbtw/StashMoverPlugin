@@ -51,7 +51,7 @@ public class StashMover extends ToggleableModule {
 	 */
 	private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
 	private final NumberSetting<Integer> delay = new NumberSetting<>("Delay", "Delay between like thingy things in ticks", 50, 0, 300);
-	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay betweenc chest clicks", 2, 0, 10);
+	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay betweenc chest clicks", 2, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final BooleanSetting is2b = new BooleanSetting("2b2t", "Changes chatpackets from player to system", true);
 	private final NumberSetting<Float> rotateYaw = new NumberSetting<>("Yaw", 0f, 0f, 360f)
 			.incremental(0.1f)

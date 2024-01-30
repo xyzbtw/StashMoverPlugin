@@ -44,7 +44,7 @@ dependencies {
     modCompileOnly files("libs/baritone-api-fabric.jar")
 
     //rusherhack api
-    rusherhackApi "org.rusherhack:rusherhack-api:1.20.1-SNAPSHOT"
+    rusherhackApi "org.rusherhack:rusherhack-api:1.20.4-SNAPSHOT"
 }
 
 loom {
