@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.HitResult;
 import org.rusherhack.client.api.RusherHackAPI;
+import org.rusherhack.client.api.accessors.gui.IMixinAbstractContainerScreen;
 import org.rusherhack.client.api.events.client.EventUpdate;
 import org.rusherhack.client.api.events.network.EventPacket;
 import org.rusherhack.client.api.events.world.EventEntity;
@@ -69,6 +70,7 @@ public class StashMover extends ToggleableModule {
 	boolean hasThrownPearl = false;
 	int ticksPassed, chestTicks = 0;
 	String LOADPEARLMSG = "LOAD PEARL";
+
 	public static BlockPos walkToPosition, LOADER_BACK_POSITION, pearlChestPosition, chestForLoot;
 	Timer lagTimer = new Timer();
 
@@ -123,15 +125,16 @@ public class StashMover extends ToggleableModule {
 				case MOVER -> {
 					switch (moverStatus) {
 						case SEND_LOAD_PEARL_MSG -> {
-							mc.player.connection.sendChat(LOADPEARLMSG);
+							mc.player.connection.sendChat("/msg " + otherIGN.getValue() + LOADPEARLMSG);
                         }
 						case WAIT_FOR_PEARL -> {
 							if(mc.player.distanceToSqr(pearlChestPosition.getX(), pearlChestPosition.getY(), pearlChestPosition.getZ()) > 9){
 								BaritoneUtil.goTo(freeBlockAroundChest(pearlChestPosition));
 								return;
 							}
-
-							openChest(pearlChestPosition);
+							if(!(mc.screen instanceof AbstractContainerScreen)){
+								openChest(pearlChestPosition);
+							}
 							if(mc.screen instanceof AbstractContainerScreen handler){
 								if(InventoryUtils.findItemHotbar(Items.ENDER_PEARL) == -1) {
 									InventoryUtil.stealOnePearl(handler);
@@ -171,6 +174,7 @@ public class StashMover extends ToggleableModule {
 							}
 							if(InventoryUtils.isInventoryFull()){
 								moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+								return;
 							}
 							if(!(mc.screen instanceof AbstractContainerScreen)){
 								openChest(getChest());
@@ -259,8 +263,7 @@ public class StashMover extends ToggleableModule {
 
 		if (event.getPacket() instanceof ClientboundSystemChatPacket systemChat && is2b.getValue()) {
 			String contents = systemChat.content().getString();
-
-			if (contents.startsWith(otherIGN.getValue()) && contents.contains(LOADPEARLMSG)) {
+			if (contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + LOADPEARLMSG)) {
 				loaderStatus = LOADER.LOAD_PEARL;
 			}
 
@@ -295,6 +298,20 @@ public class StashMover extends ToggleableModule {
 			}
 		}
 		return lookPos==null ? "You're not in a world??" : "Successfully set to the pos you were looking at";
+	}
+
+	@Override
+	public String getMetadata(){
+		switch (mode.getValue()){
+			case LOADER -> {
+				return loaderStatus.name();
+			}
+			case MOVER -> {
+				return moverStatus.name();
+			}
+		}
+
+		return "";
 	}
 	@Override
 	public ModuleCommand createCommand() {
