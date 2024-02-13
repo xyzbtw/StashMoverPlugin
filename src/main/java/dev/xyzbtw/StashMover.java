@@ -125,7 +125,7 @@ public class StashMover extends ToggleableModule {
 				case MOVER -> {
 					switch (moverStatus) {
 						case SEND_LOAD_PEARL_MSG -> {
-							mc.player.connection.sendChat("/msg " + otherIGN.getValue() + LOADPEARLMSG);
+							mc.player.connection.sendChat("/msg " + otherIGN.getValue() + " " + LOADPEARLMSG);
                         }
 						case WAIT_FOR_PEARL -> {
 							if(mc.player.distanceToSqr(pearlChestPosition.getX(), pearlChestPosition.getY(), pearlChestPosition.getZ()) > 9){
