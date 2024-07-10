@@ -23,6 +23,8 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.rusherhack.client.api.RusherHackAPI;
@@ -67,6 +69,7 @@ public class StashMover extends ToggleableModule {
 	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 2, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final BooleanSetting is2b = new BooleanSetting("Systemchat", "Changes chatpackets from player to system", true);
 	private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", false);
+	private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", false);
 	private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
 
 	/**
@@ -97,7 +100,8 @@ public class StashMover extends ToggleableModule {
 				this.mode,
 				this.chestDelay,
 				this.is2b,
-				autoDisable,
+				this.autoDisable,
+				this.ignoreSingular,
 				this.otherIGN
 		);
 	}
@@ -206,7 +210,10 @@ public class StashMover extends ToggleableModule {
 						mc.player.closeContainer();
 						int count = 0;
 						for(BlockEntity e : WorldUtils.getBlockEntities(true)){
-							if(e instanceof ChestBlockEntity){
+							if(e instanceof ChestBlockEntity chest){
+								if(ignoreSingular.getValue()){
+									if(chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) continue;
+								}
 								count++;
 							}
 						}
@@ -432,15 +439,18 @@ public class StashMover extends ToggleableModule {
 		BlockPos closestChest = null;
 		double shortestDistance = Integer.MAX_VALUE;
 
-		for(BlockEntity chest : WorldUtils.getBlockEntities(true)){
-			if(blacklistChests.contains(chest.getBlockPos())) continue;
+		for(BlockEntity blockentity : WorldUtils.getBlockEntities(true)){
+			if(blacklistChests.contains(blockentity.getBlockPos())) continue;
 
-			if(chest instanceof ChestBlockEntity){
-				double distance = chest.getBlockPos().getCenter().distanceTo(mc.player.position());
+			if(blockentity instanceof ChestBlockEntity chest){
+				if(ignoreSingular.getValue()){
+					if(chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) continue;
+				}
+				double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
 
 				if(distance < shortestDistance) {
 					shortestDistance = distance;
-					closestChest = chest.getBlockPos();
+					closestChest = blockentity.getBlockPos();
 				}
 			}
 
