@@ -2,25 +2,17 @@ package dev.xyzbtw;
 
 import dev.xyzbtw.utils.BaritoneUtil;
 import dev.xyzbtw.utils.InventoryUtil;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ChestBlock;
-import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -28,16 +20,15 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.rusherhack.client.api.RusherHackAPI;
-import org.rusherhack.client.api.accessors.gui.IMixinAbstractContainerScreen;
 import org.rusherhack.client.api.events.client.EventUpdate;
 import org.rusherhack.client.api.events.network.EventPacket;
+import org.rusherhack.client.api.events.render.EventRender3D;
 import org.rusherhack.client.api.events.world.EventEntity;
 import org.rusherhack.client.api.feature.command.ModuleCommand;
 import org.rusherhack.client.api.feature.module.ModuleCategory;
 import org.rusherhack.client.api.feature.module.ToggleableModule;
-import org.rusherhack.client.api.utils.ChatUtils;
+import org.rusherhack.client.api.render.IRenderer3D;
 import org.rusherhack.client.api.utils.InventoryUtils;
-import org.rusherhack.client.api.utils.RotationUtils;
 import org.rusherhack.client.api.utils.WorldUtils;
 import org.rusherhack.core.command.annotations.CommandExecutor;
 import org.rusherhack.core.event.subscribe.Subscribe;
@@ -49,10 +40,10 @@ import org.rusherhack.core.setting.StringSetting;
 import org.rusherhack.core.utils.MathUtils;
 import org.rusherhack.core.utils.Timer;
 
-import java.util.ArrayList;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * A module that moves stashes for you
@@ -66,10 +57,11 @@ public class StashMover extends ToggleableModule {
 	 * Settings
 	 */
 	private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
-	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 2, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
+	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 1, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final BooleanSetting is2b = new BooleanSetting("Systemchat", "Changes chatpackets from player to system", true);
-	private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", false);
-	private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", false);
+	private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
+	private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
+	private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
 	private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
 
 	/**
@@ -86,6 +78,8 @@ public class StashMover extends ToggleableModule {
 	List<BlockPos> blacklistChests = new ArrayList<>();
 	BlockPos currentChest;
 	boolean sentMessage = false;
+	boolean filledEchest = false;
+	Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
 	public static BlockPos  LOADER_BACK_POSITION,
 							pearlChestPosition,
 							chestForLoot;
@@ -99,12 +93,21 @@ public class StashMover extends ToggleableModule {
 		this.registerSettings(
 				this.mode,
 				this.chestDelay,
+				this.useEchest,
 				this.is2b,
 				this.autoDisable,
 				this.ignoreSingular,
 				this.otherIGN
 		);
 	}
+
+	@Override
+	public void onEnable() {
+		super.onEnable();
+		moverStatus = MOVER.LOOT;
+		loaderStatus = LOADER.WAITING;
+	}
+
 	/**
 	 * methods
 	 */
@@ -191,19 +194,52 @@ public class StashMover extends ToggleableModule {
 					moverStatus = MOVER.WALKING_TO_CHEST;
 
 				}
+				case ECHEST_LOOT -> {
+					if (!filledEchest && !InventoryUtil.isInventoryEmpty()) { // put shit into echest
+						if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
+							BaritoneUtil.goTo(Blocks.ENDER_CHEST);
+							return;
+						}
+
+						if(InventoryUtil.isChestFull() || InventoryUtil.isInventoryEmpty()){
+							filledEchest = true;
+							mc.player.closeContainer();
+							moverStatus = MOVER.LOOT;
+							return;
+						}
+
+						chestTicks++;
+						for(int i = menu.getContainer().getContainerSize(); i < menu.getContainer().getContainerSize() + 36; i++){
+							if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+							if (chestTicks < chestDelay.getValue()) return;
+
+							InventoryUtils.clickSlot(i, true);
+							chestTicks=0;
+						}
+
+						return;
+					}
+				}
 				case LOOT -> {
 					if (mc.player.isDeadOrDying()) {
 						mc.player.respawn();
 						return;
 					}
 					if (InventoryUtils.isInventoryFull()) {
-						moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+						moverStatus = MOVER.ECHEST_LOOT;
+						if(filledEchest || !useEchest.getValue())
+							moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+
+						mc.player.closeContainer();
 						return;
 					}
+
+
 					if (!(mc.player.containerMenu instanceof ChestMenu)) {
 						openChest(getChest());
 						return;
 					}
+
 					if (InventoryUtil.isChestEmpty()) {
 						blacklistChests.add(currentChest);
 						System.out.println("Added " + currentChest + " to blacklist");
@@ -224,6 +260,7 @@ public class StashMover extends ToggleableModule {
 						}
 						return;
 					}
+
 					chestTicks++;
 					for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
 						if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
@@ -240,6 +277,19 @@ public class StashMover extends ToggleableModule {
 						return;
 					}
 
+					if (InventoryUtil.isInventoryEmpty()) {
+
+						if(filledEchest && useEchest.getValue()){
+							moverStatus = MOVER.ECHEST_FILL;
+							mc.player.closeContainer();
+							return;
+						}
+
+						moverStatus = MOVER.LOOT;
+						mc.player.connection.sendCommand("kill");
+						return;
+					}
+
 					if (!(mc.player.containerMenu instanceof ChestMenu)) {
 						openChest(chestForLoot);
 						return;
@@ -251,17 +301,35 @@ public class StashMover extends ToggleableModule {
 							this.toggle();
 							return;
 						}
-						if (InventoryUtil.isInventoryEmpty()) {
-							moverStatus = MOVER.LOOT;
-							mc.player.connection.sendCommand("kill");
-							return;
-						}
 						if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
 						if (chestTicks < chestDelay.getValue()) return;
 
 						InventoryUtils.clickSlot(i, true);
 						chestTicks = 0;
 					}
+				}
+				case ECHEST_FILL -> {
+					if(!(mc.player.containerMenu instanceof ChestMenu menu)){
+						BaritoneUtil.goTo(Blocks.ENDER_CHEST);
+						return;
+					}
+
+					if(InventoryUtil.isChestEmpty()){
+						filledEchest = false;
+						moverStatus = MOVER.WALKING_TO_CHEST;
+						mc.player.closeContainer();
+						return;
+					}
+
+					chestTicks++;
+					for(int i = 0; i < menu.getContainer().getContainerSize(); i++){
+						if(!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+						if(chestTicks < chestDelay.getValue()) return;
+
+						InventoryUtils.clickSlot(i, true);
+						chestTicks = 0;
+					}
+
 				}
 			}
 		}
@@ -277,6 +345,7 @@ public class StashMover extends ToggleableModule {
 						return;
 					}
 					System.out.println("interacting at " + chamber);
+					RusherHackAPI.getRotationManager().updateRotation(BlockPos.containing(chamber));
 					RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
 					loaderStatus = LOADER.WAITING;
 				}
@@ -284,6 +353,24 @@ public class StashMover extends ToggleableModule {
 			}
 		}
 	}
+
+//	@Subscribe
+//	public void onRender(EventRender3D event){
+//		if(mc.level == null || mc.player == null) return;
+//
+//		final IRenderer3D renderer = event.getRenderer();
+//
+//		renderer.begin();
+//
+//		if(!stealChests.isEmpty()){
+//			for(BlockPos pos : stealChests){
+//				if(blacklistChests.contains(pos)) continue;
+//				renderer.drawBox(pos, true, true, new Color(255, 140, 0, 70).getRGB());
+//			}
+//		}
+//
+//		renderer.end();
+//	}
 
 	@Subscribe
 	private void onAddEntity(EventEntity.Add event){
@@ -442,6 +529,8 @@ public class StashMover extends ToggleableModule {
 		for(BlockEntity blockentity : WorldUtils.getBlockEntities(true)){
 			if(blacklistChests.contains(blockentity.getBlockPos())) continue;
 
+			stealChests.add(blockentity.getBlockPos());
+
 			if(blockentity instanceof ChestBlockEntity chest){
 				if(ignoreSingular.getValue()){
 					if(chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) continue;
@@ -494,7 +583,9 @@ public class StashMover extends ToggleableModule {
 		WAIT_FOR_PEARL,
 		WALKING_TO_CHEST,
 		THROWING_PEARL,
-		PUT_BACK_PEARLS
+		PUT_BACK_PEARLS,
+		ECHEST_LOOT,
+		ECHEST_FILL
 	}
 	protected enum LOADER{
 		LOAD_PEARL,
