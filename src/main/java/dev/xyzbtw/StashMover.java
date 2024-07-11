@@ -53,451 +53,457 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @SuppressWarnings("unused")
 public class StashMover extends ToggleableModule {
 
-	/**
-	 * Settings
-	 */
-	private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
-	private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 1, 0, 10).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
-	private final BooleanSetting is2b = new BooleanSetting("Systemchat", "Changes chatpackets from player to system", true);
-	private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
-	private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
-	private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(()-> mode.getValue().equals(MODES.MOVER));
-	private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
+    /**
+     * Settings
+     */
+    private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
+    private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 1, 0, 10).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final BooleanSetting is2b = new BooleanSetting("Systemchat", "Changes chatpackets from player to system", true);
+    private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
 
-	/**
-	 * variables
-	 */
+    /**
+     * variables
+     */
 
-	private MOVER moverStatus = MOVER.LOOT;
-	private LOADER loaderStatus = LOADER.WAITING;
-	boolean hasThrownPearl = false;
-	int chestTicks = 0;
-	int ticksPassed = 0;
-	String LOADPEARLMSG = "LOAD PEARL";
-	Vec3 chamber;
-	List<BlockPos> blacklistChests = new ArrayList<>();
-	BlockPos currentChest;
-	boolean sentMessage = false;
-	boolean filledEchest = false;
-	Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
-	public static BlockPos  LOADER_BACK_POSITION,
-							pearlChestPosition,
-							chestForLoot;
-	Timer lagTimer = new Timer();
+    private MOVER moverStatus = MOVER.LOOT;
+    private LOADER loaderStatus = LOADER.WAITING;
+    boolean hasThrownPearl = false;
+    int chestTicks = 0;
+    int ticksPassed = 0;
+    String LOADPEARLMSG = "LOAD PEARL";
+    Vec3 chamber;
+    List<BlockPos> blacklistChests = new ArrayList<>();
+    BlockPos currentChest;
+    boolean sentMessage = false;
+    boolean filledEchest = false;
+    Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
+    public static BlockPos LOADER_BACK_POSITION,
+            pearlChestPosition,
+            chestForLoot;
+    Timer lagTimer = new Timer();
 
-	/**
-	 * constructor
-	 */
-	public StashMover() {
-		super("StashMover", "Moves stashes with pearls", ModuleCategory.CLIENT);
-		this.registerSettings(
-				this.mode,
-				this.chestDelay,
-				this.useEchest,
-				this.is2b,
-				this.autoDisable,
-				this.ignoreSingular,
-				this.otherIGN
-		);
-	}
+    /**
+     * constructor
+     */
+    public StashMover() {
+        super("StashMover", "Moves stashes with pearls", ModuleCategory.CLIENT);
+        this.registerSettings(
+                this.mode,
+                this.chestDelay,
+                this.useEchest,
+                this.is2b,
+                this.autoDisable,
+                this.ignoreSingular,
+                this.otherIGN
+        );
+    }
 
-	@Override
-	public void onEnable() {
-		super.onEnable();
-		moverStatus = MOVER.LOOT;
-		loaderStatus = LOADER.WAITING;
-	}
+    @Override
+    public void onEnable() {
+        super.onEnable();
+        moverStatus = MOVER.LOOT;
+        loaderStatus = LOADER.WAITING;
+    }
 
-	/**
-	 * methods
-	 */
+    /**
+     * methods
+     */
 
-	@Subscribe
-	private void onUpdate(EventUpdate event) {
-		if(mc.player == null || mc.level == null) return;
+    @Subscribe
+    private void onUpdate(EventUpdate event) {
+        if (mc.player == null || mc.level == null) return;
 
-		if(mode.getValue().equals(MODES.MOVER)){
-			if(pearlChestPosition == null || chestForLoot==null){
-				RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
-				this.toggle();
-				return;
-			}
-		}else{
-			if(chamber==null){
-				RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "Chamber position isn't set big boy");
-				this.toggle();
-				return;
-			}
-		}
+        if (mode.getValue().equals(MODES.MOVER)) {
+            if (pearlChestPosition == null || chestForLoot == null) {
+                RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
+                this.toggle();
+                return;
+            }
+        } else {
+            if (chamber == null) {
+                RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "Chamber position isn't set big boy");
+                this.toggle();
+                return;
+            }
+        }
 
-		if(lagTimer.passed(1000)) return;
+        if (lagTimer.passed(1000)) return;
 
-		ticksPassed++;
-		if(ticksPassed < 2) return;
-		ticksPassed = 0;
-
-
-		if (mode.getValue().equals(MODES.MOVER)) {
-			switch (moverStatus) {
-				case SEND_LOAD_PEARL_MSG -> {
-					if (!sentMessage) {
-						mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + LOADPEARLMSG);
-						sentMessage = true;
-					}
-				}
-				case WAIT_FOR_PEARL -> {
-					sentMessage = false;
-					if (mc.player.distanceToSqr(pearlChestPosition.getX(), pearlChestPosition.getY(), pearlChestPosition.getZ()) > 9) {
-						return;
-					}
-					if (!(mc.player.containerMenu instanceof ChestMenu)) {
-						openChest(pearlChestPosition);
-						return;
-					}
-
-					if (InventoryUtils.findItemHotbar(Items.ENDER_PEARL) == -1) {
-						InventoryUtil.stealOnePearl();
-						return;
-					} else {
-						mc.player.closeContainer();
-						moverStatus = MOVER.THROWING_PEARL;
-					}
-
-				}
-				case THROWING_PEARL -> {
-					throwPearl();
-					if (hasThrownPearl) {
-						moverStatus = MOVER.PUT_BACK_PEARLS;
-						hasThrownPearl = false;
-					}
-				}
-				case PUT_BACK_PEARLS -> {
-					if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
-						openChest(pearlChestPosition);
-						return;
-					}
-					Container container = menu.getContainer();
-
-					chestTicks++;
-					if(InventoryUtils.findItem(Items.ENDER_PEARL, true, false) != -1){
-						for(int i = 0; i < container.getContainerSize(); i++){
-							if(!container.getItem(i).getItem().equals(Items.ENDER_PEARL)){
-								InventoryUtils.clickSlot(i, false);
-								InventoryUtils.clickSlot(container.getContainerSize() + 36 - 8, false);
-								InventoryUtils.clickSlot(i, false);
-							}
-							chestTicks=0;
-						}
-						return;
-					}
-					mc.player.closeContainer();
-					moverStatus = MOVER.WALKING_TO_CHEST;
-
-				}
-				case ECHEST_LOOT -> {
-					if (!filledEchest && !InventoryUtil.isInventoryEmpty()) { // put shit into echest
-						if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
-							BaritoneUtil.goTo(Blocks.ENDER_CHEST);
-							return;
-						}
-
-						if(InventoryUtil.isChestFull() || InventoryUtil.isInventoryEmpty()){
-							filledEchest = true;
-							mc.player.closeContainer();
-							moverStatus = MOVER.LOOT;
-							return;
-						}
-
-						chestTicks++;
-						for(int i = menu.getContainer().getContainerSize(); i < menu.getContainer().getContainerSize() + 36; i++){
-							if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
-							if (chestTicks < chestDelay.getValue()) return;
-
-							InventoryUtils.clickSlot(i, true);
-							chestTicks=0;
-						}
-
-						return;
-					}
-				}
-				case LOOT -> {
-					if (mc.player.isDeadOrDying()) {
-						mc.player.respawn();
-						return;
-					}
-					if (InventoryUtils.isInventoryFull()) {
-						moverStatus = MOVER.ECHEST_LOOT;
-						if(filledEchest || !useEchest.getValue())
-							moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
-
-						mc.player.closeContainer();
-						return;
-					}
+        ticksPassed++;
+        if (ticksPassed < 2) return;
+        ticksPassed = 0;
 
 
-					if (!(mc.player.containerMenu instanceof ChestMenu)) {
-						openChest(getChest());
-						return;
-					}
+        if (mode.getValue().equals(MODES.MOVER)) {
+            switch (moverStatus) {
+                case SEND_LOAD_PEARL_MSG -> {
+                    if (!sentMessage) {
+                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + LOADPEARLMSG);
+                        sentMessage = true;
+                    }
+                }
+                case WAIT_FOR_PEARL -> {
+                    sentMessage = false;
+                    if (mc.player.distanceToSqr(pearlChestPosition.getX(), pearlChestPosition.getY(), pearlChestPosition.getZ()) > 9) {
+                        return;
+                    }
+                    if (!(mc.player.containerMenu instanceof ChestMenu)) {
+                        openChest(pearlChestPosition);
+                        return;
+                    }
 
-					if (InventoryUtil.isChestEmpty()) {
-						blacklistChests.add(currentChest);
-						System.out.println("Added " + currentChest + " to blacklist");
-						mc.player.closeContainer();
-						int count = 0;
-						for(BlockEntity e : WorldUtils.getBlockEntities(true)){
-							if(e instanceof ChestBlockEntity chest){
-								if(ignoreSingular.getValue()){
-									if(chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) continue;
-								}
-								count++;
-							}
-						}
-						if(!blacklistChests.isEmpty() && blacklistChests.size() >= count){
-							moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
-							this.toggle();
-							return;
-						}
-						return;
-					}
+                    if (InventoryUtils.findItemHotbar(Items.ENDER_PEARL) == -1) {
+                        InventoryUtil.stealOnePearl();
+                        return;
+                    } else {
+                        mc.player.closeContainer();
+                        moverStatus = MOVER.THROWING_PEARL;
+                    }
 
-					chestTicks++;
-					for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
-						if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
-						if (chestTicks < chestDelay.getValue()) return;
+                }
+                case THROWING_PEARL -> {
+                    throwPearl();
+                    if (hasThrownPearl) {
+                        moverStatus = MOVER.PUT_BACK_PEARLS;
+                        hasThrownPearl = false;
+                    }
+                }
+                case PUT_BACK_PEARLS -> {
+                    if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
+                        openChest(pearlChestPosition);
+                        return;
+                    }
+                    Container container = menu.getContainer();
 
-						InventoryUtils.clickSlot(i, true);
-						chestTicks = 0;
-					}
-				}
-				case WALKING_TO_CHEST -> {
+                    chestTicks++;
+                    if (InventoryUtils.findItem(Items.ENDER_PEARL, true, false) != -1) {
+                        for (int i = 0; i < container.getContainerSize(); i++) {
+                            if (!container.getItem(i).getItem().equals(Items.ENDER_PEARL)) {
+                                InventoryUtils.clickSlot(i, false);
+                                InventoryUtils.clickSlot(container.getContainerSize() + 36 - 8, false);
+                                InventoryUtils.clickSlot(i, false);
+                            }
+                            chestTicks = 0;
+                        }
+                        return;
+                    }
+                    mc.player.closeContainer();
+                    moverStatus = MOVER.WALKING_TO_CHEST;
 
-					if (mc.player.distanceToSqr(chestForLoot.getX(), chestForLoot.getY(), chestForLoot.getZ()) > 9) {
-						BaritoneUtil.goTo(freeBlockAroundChest(chestForLoot));
-						return;
-					}
+                }
+                case ECHEST_LOOT -> {
+                    if (filledEchest || !useEchest.getValue())
+                        moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+                    if (!filledEchest && !InventoryUtil.isInventoryEmpty()) { // put shit into echest
+                        if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
+                            BaritoneUtil.goTo(Blocks.ENDER_CHEST);
+                            return;
+                        }
 
-					if (InventoryUtil.isInventoryEmpty()) {
+                        if (InventoryUtil.isChestFull() || InventoryUtil.isInventoryEmpty()) {
+                            filledEchest = true;
+                            mc.player.closeContainer();
+                            moverStatus = MOVER.LOOT;
+                            return;
+                        }
 
-						if(filledEchest && useEchest.getValue()){
-							moverStatus = MOVER.ECHEST_FILL;
-							mc.player.closeContainer();
-							return;
-						}
+                        chestTicks++;
+                        for (int i = menu.getContainer().getContainerSize(); i < menu.getContainer().getContainerSize() + 36; i++) {
+                            if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+                            if (chestTicks < chestDelay.getValue()) return;
 
-						moverStatus = MOVER.LOOT;
-						mc.player.connection.sendCommand("kill");
-						return;
-					}
+                            InventoryUtils.clickSlot(i, true);
+                            chestTicks = 0;
+                        }
 
-					if (!(mc.player.containerMenu instanceof ChestMenu)) {
-						openChest(chestForLoot);
-						return;
-					}
+                        return;
+                    }
+                }
+                case LOOT -> {
+                    if (mc.player.isDeadOrDying()) {
+                        mc.player.respawn();
+                        return;
+                    }
+                    if (InventoryUtils.isInventoryFull()) {
+                        moverStatus = MOVER.ECHEST_LOOT;
+                        if (filledEchest || !useEchest.getValue())
+                            moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
 
-					chestTicks++;
-					for (int i = mc.player.containerMenu.slots.size() - 36; i < mc.player.containerMenu.slots.size(); i++) {
-						if(InventoryUtil.isChestFull() && autoDisable.getValue()){
-							this.toggle();
-							return;
-						}
-						if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
-						if (chestTicks < chestDelay.getValue()) return;
+                        mc.player.closeContainer();
+                        return;
+                    }
 
-						InventoryUtils.clickSlot(i, true);
-						chestTicks = 0;
-					}
-				}
-				case ECHEST_FILL -> {
-					if(!(mc.player.containerMenu instanceof ChestMenu menu)){
-						BaritoneUtil.goTo(Blocks.ENDER_CHEST);
-						return;
-					}
 
-					if(InventoryUtil.isChestEmpty()){
-						filledEchest = false;
-						moverStatus = MOVER.WALKING_TO_CHEST;
-						mc.player.closeContainer();
-						return;
-					}
+                    if (!(mc.player.containerMenu instanceof ChestMenu)) {
+                        openChest(getChest());
+                        return;
+                    }
 
-					chestTicks++;
-					for(int i = 0; i < menu.getContainer().getContainerSize(); i++){
-						if(!mc.player.containerMenu.getSlot(i).hasItem()) continue;
-						if(chestTicks < chestDelay.getValue()) return;
+                    if (InventoryUtil.isChestEmpty()) {
+                        blacklistChests.add(currentChest);
+                        System.out.println("Added " + currentChest + " to blacklist");
+                        mc.player.closeContainer();
+                        int count = 0;
+                        for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
+                            if (e instanceof ChestBlockEntity chest) {
+                                if (ignoreSingular.getValue()) {
+                                    if (chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE))
+                                        continue;
+                                }
+                                count++;
+                            }
+                        }
+                        if (!blacklistChests.isEmpty() && blacklistChests.size() >= count) {
+                            moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+                            this.toggle();
+                            return;
+                        }
+                        return;
+                    }
 
-						InventoryUtils.clickSlot(i, true);
-						chestTicks = 0;
-					}
+                    chestTicks++;
+                    for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
+                        if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+                        if (chestTicks < chestDelay.getValue()) return;
 
-				}
-			}
-		}
-		if (mode.getValue().equals(MODES.LOADER)) {
-			switch (loaderStatus) {
-				case WAITING -> {
-					System.out.println("just waiting yk");
-					return;
-				}
-				case LOAD_PEARL -> {
-					if (chamber.distanceTo(mc.player.position()) > 3) {
-						BaritoneUtil.goTo(BlockPos.containing(chamber));
-						return;
-					}
-					System.out.println("interacting at " + chamber);
-					RusherHackAPI.getRotationManager().updateRotation(BlockPos.containing(chamber));
-					RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
-					loaderStatus = LOADER.WAITING;
-				}
+                        InventoryUtils.clickSlot(i, true);
+                        chestTicks = 0;
+                    }
+                }
+                case WALKING_TO_CHEST -> {
 
-			}
-		}
-	}
+                    if (mc.player.distanceToSqr(chestForLoot.getX(), chestForLoot.getY(), chestForLoot.getZ()) > 9) {
+                        BaritoneUtil.goTo(freeBlockAroundChest(chestForLoot));
+                        return;
+                    }
 
-//	@Subscribe
-//	public void onRender(EventRender3D event){
-//		if(mc.level == null || mc.player == null) return;
-//
-//		final IRenderer3D renderer = event.getRenderer();
-//
-//		renderer.begin();
-//
-//		if(!stealChests.isEmpty()){
-//			for(BlockPos pos : stealChests){
-//				if(blacklistChests.contains(pos)) continue;
-//				renderer.drawBox(pos, true, true, new Color(255, 140, 0, 70).getRGB());
-//			}
-//		}
-//
-//		renderer.end();
-//	}
+                    if (InventoryUtil.isInventoryEmpty()) {
+
+                        if (filledEchest && useEchest.getValue()) {
+                            moverStatus = MOVER.ECHEST_FILL;
+                            mc.player.closeContainer();
+                            return;
+                        }
+
+                        moverStatus = MOVER.LOOT;
+                        mc.player.connection.sendCommand("kill");
+                        return;
+                    }
+
+                    if (!(mc.player.containerMenu instanceof ChestMenu)) {
+                        openChest(chestForLoot);
+                        return;
+                    }
+
+                    chestTicks++;
+                    for (int i = mc.player.containerMenu.slots.size() - 36; i < mc.player.containerMenu.slots.size(); i++) {
+                        if (InventoryUtil.isChestFull() && autoDisable.getValue()) {
+                            this.toggle();
+                            return;
+                        }
+                        if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+                        if (chestTicks < chestDelay.getValue()) return;
+
+                        InventoryUtils.clickSlot(i, true);
+                        chestTicks = 0;
+                    }
+                }
+                case ECHEST_FILL -> {
+                    if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
+                        BaritoneUtil.goTo(Blocks.ENDER_CHEST);
+                        return;
+                    }
+
+                    if (InventoryUtil.isChestEmpty()) {
+                        filledEchest = false;
+                        moverStatus = MOVER.WALKING_TO_CHEST;
+                        mc.player.closeContainer();
+                        return;
+                    }
+
+                    chestTicks++;
+                    for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
+                        if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+                        if (chestTicks < chestDelay.getValue()) return;
+
+                        InventoryUtils.clickSlot(i, true);
+                        chestTicks = 0;
+                    }
+
+                }
+            }
+        }
+        if (mode.getValue().equals(MODES.LOADER)) {
+            switch (loaderStatus) {
+                case WAITING -> {
+                    System.out.println("just waiting yk");
+                    return;
+                }
+                case LOAD_PEARL -> {
+                    if (chamber.distanceTo(mc.player.position()) > 3) {
+                        BaritoneUtil.goTo(BlockPos.containing(chamber));
+                        return;
+                    }
+                    System.out.println("interacting at " + chamber);
+                    RusherHackAPI.getRotationManager().updateRotation(BlockPos.containing(chamber));
+                    RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
+                    loaderStatus = LOADER.WAITING;
+                }
+
+            }
+        }
+    }
 
 	@Subscribe
-	private void onAddEntity(EventEntity.Add event){
+	private void onRender(EventRender3D event){
+		final IRenderer3D renderer = event.getRenderer();
 
-		if(mode.getValue().equals(MODES.MOVER)) {
-			if (event.getEntity() instanceof ThrownEnderpearl
-					&& mode.getValue().equals(MODES.MOVER)
-					&& moverStatus.equals(MOVER.THROWING_PEARL)) {
-				hasThrownPearl = true;
-			}
-			if (event.getEntity() instanceof Player
-					&& ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
-				moverStatus = MOVER.WAIT_FOR_PEARL;
+		renderer.begin(event.getMatrixStack());
+
+		if(!stealChests.isEmpty()){
+			for(BlockPos pos : stealChests){
+				if(blacklistChests.contains(pos)) continue;
+				renderer.drawBox(pos, true, true, new Color(255, 140, 0, 70).getRGB());
 			}
 		}
-		else{
-			if(event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())){
-				RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
-			}
-		}
-	}
-	@Subscribe
-	public void onPacketSend(EventPacket.Send event){
-		if(event.getPacket() instanceof ServerboundContainerClosePacket){
-			currentChest = null;
-		}
-		if(event.getPacket() instanceof ServerboundUseItemOnPacket packet){
-			if(mc.level.getBlockState(packet.getHitResult().getBlockPos()).getBlock() instanceof ChestBlock){
-				currentChest = packet.getHitResult().getBlockPos();
-			}
-		}
-	}
-	@Subscribe
-	public void onPacketReceive(EventPacket.Receive event){
-		if(mc.player == null || mc.level == null) return;
 
-		lagTimer.reset();
-
-		if(!mode.getValue().equals(MODES.LOADER)) return;
-		if (event.getPacket() instanceof ClientboundSystemChatPacket systemChat && is2b.getValue()) {
-			String contents = systemChat.content().getString();
-			System.out.println(contents);
-			if (contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + LOADPEARLMSG) || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + LOADPEARLMSG)) {
-				loaderStatus = LOADER.LOAD_PEARL;
-			}
-
-		}
-		else if (event.getPacket() instanceof ClientboundPlayerChatPacket chatPacket) {
-			if (!is2b.getValue()) {
-				String message = chatPacket.body().content();
-				if (message.equalsIgnoreCase(LOADPEARLMSG)) loaderStatus = LOADER.LOAD_PEARL;
-			}
-		}
-	}
-	protected String getLookPos(String string){
-		Vec3 lookPos = null;
-		if(mc.level!=null) {
-			if (mc.hitResult == null) return "No hitresult, look at the block";
-
-			if (mc.hitResult.getType() != HitResult.Type.BLOCK) return "You're not looking at a block big boy";
-
-
-			lookPos = mc.hitResult.getLocation();
-
-
-			if(string.equalsIgnoreCase("pearlchest")) {
-				 pearlChestPosition = BlockPos.containing(lookPos);
-			}else if (string.equalsIgnoreCase("lootchest"))
-				 chestForLoot = BlockPos.containing(lookPos);
-		}
-		return lookPos==null ? "You're not in a world??" : "Set to " + "X: " +  MathUtils.round(lookPos.x, 2)
-				+ " Y: " + MathUtils.round(lookPos.y, 2)
-				+ " Z: " + MathUtils.round(lookPos.z, 2);
+		renderer.end();
 	}
 
-	@Override
-	public String getMetadata(){
-		switch (mode.getValue()){
-			case LOADER -> {
-				return loaderStatus.name();
-			}
-			case MOVER -> {
-				return moverStatus.name();
-			}
-		}
+    @Subscribe
+    private void onAddEntity(EventEntity.Add event) {
 
-		return "";
-	}
-	@Override
-	public ModuleCommand createCommand() {
-		return new ModuleCommand(this) {
-			@CommandExecutor(subCommand = "pearlchest")
-			private String setPearlChestPos() {
-				return getLookPos("pearlchest");
-			}
-			@CommandExecutor(subCommand = "lootchest")
-			private String setLootChestPos() {
-				return getLookPos("lootchest");
-			}
-			@CommandExecutor(subCommand = "chamber")
-			private String setChamberPos(){
-				if(mc.level == null || mc.player==null || mc.getCameraEntity() == null) return "Not in a world";
-				if (mc.hitResult.getType() != HitResult.Type.BLOCK) return "You're not looking at a block big boy";
-				chamber = mc.hitResult != null ? mc.hitResult.getLocation() : null;
-				return "Set chamber position.";
-			}
+        if (mode.getValue().equals(MODES.MOVER)) {
+            if (event.getEntity() instanceof ThrownEnderpearl
+                    && mode.getValue().equals(MODES.MOVER)
+                    && moverStatus.equals(MOVER.THROWING_PEARL)) {
+                hasThrownPearl = true;
+            }
+            if (event.getEntity() instanceof Player
+                    && ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
+                moverStatus = MOVER.WAIT_FOR_PEARL;
+            }
+        } else {
+            if (event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())) {
+                RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
+            }
+        }
+    }
 
-		};
-	}
+    @Subscribe
+    public void onPacketSend(EventPacket.Send event) {
+        if (event.getPacket() instanceof ServerboundContainerClosePacket) {
+            currentChest = null;
+        }
+        if (event.getPacket() instanceof ServerboundUseItemOnPacket packet) {
+            if (mc.level.getBlockState(packet.getHitResult().getBlockPos()).getBlock() instanceof ChestBlock) {
+                currentChest = packet.getHitResult().getBlockPos();
+            }
+        }
+    }
+
+    @Subscribe
+    public void onPacketReceive(EventPacket.Receive event) {
+        if (mc.player == null || mc.level == null) return;
+
+        lagTimer.reset();
+
+        if (!mode.getValue().equals(MODES.LOADER)) return;
+        if (event.getPacket() instanceof ClientboundSystemChatPacket systemChat && is2b.getValue()) {
+            String contents = systemChat.content().getString();
+            System.out.println(contents);
+            if (contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + LOADPEARLMSG) || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + LOADPEARLMSG)) {
+                loaderStatus = LOADER.LOAD_PEARL;
+            }
+
+        } else if (event.getPacket() instanceof ClientboundPlayerChatPacket chatPacket) {
+            if (!is2b.getValue()) {
+                String message = chatPacket.body().content();
+                if (message.equalsIgnoreCase(LOADPEARLMSG)) loaderStatus = LOADER.LOAD_PEARL;
+            }
+        }
+    }
+
+    protected String getLookPos(String string) {
+        Vec3 lookPos = null;
+        if (mc.level != null) {
+            if (mc.hitResult == null) return "No hitresult, look at the block";
+
+            if (mc.hitResult.getType() != HitResult.Type.BLOCK) return "You're not looking at a block big boy";
 
 
-	private UUID getUUID(String otherIGN){
-		Optional<PlayerInfo> playerOpt = mc.player.connection.getOnlinePlayers().stream()
-				.filter(p -> p.getProfile().getName().equalsIgnoreCase(otherIGN))
-				.findFirst();
-		if(playerOpt.isPresent()){
-			return playerOpt.get().getProfile().getId();
-		} else {
-			RusherHackAPI.getNotificationManager().chat("Sorry lil bro couldn't find your 2nd acc");
-		}
-		return null;
-	}
-	protected void throwPearl(){
-		mc.player.setXRot(90);
+            lookPos = mc.hitResult.getLocation();
 
-		if(mc.hitResult == null) return;
-		if(mc.hitResult.getType() == HitResult.Type.BLOCK) return;
+
+            if (string.equalsIgnoreCase("pearlchest")) {
+                pearlChestPosition = BlockPos.containing(lookPos);
+            } else if (string.equalsIgnoreCase("lootchest"))
+                chestForLoot = BlockPos.containing(lookPos);
+        }
+        return lookPos == null ? "You're not in a world??" : "Set to " + "X: " + MathUtils.round(lookPos.x, 2)
+                + " Y: " + MathUtils.round(lookPos.y, 2)
+                + " Z: " + MathUtils.round(lookPos.z, 2);
+    }
+
+    @Override
+    public String getMetadata() {
+        switch (mode.getValue()) {
+            case LOADER -> {
+                return loaderStatus.name();
+            }
+            case MOVER -> {
+                return moverStatus.name();
+            }
+        }
+
+        return "";
+    }
+
+    @Override
+    public ModuleCommand createCommand() {
+        return new ModuleCommand(this) {
+            @CommandExecutor(subCommand = "pearlchest")
+            private String setPearlChestPos() {
+                return getLookPos("pearlchest");
+            }
+
+            @CommandExecutor(subCommand = "lootchest")
+            private String setLootChestPos() {
+                return getLookPos("lootchest");
+            }
+
+            @CommandExecutor(subCommand = "chamber")
+            private String setChamberPos() {
+                if (mc.level == null || mc.player == null || mc.getCameraEntity() == null) return "Not in a world";
+                if (mc.hitResult.getType() != HitResult.Type.BLOCK) return "You're not looking at a block big boy";
+                chamber = mc.hitResult != null ? mc.hitResult.getLocation() : null;
+                return "Set chamber position.";
+            }
+
+        };
+    }
+
+
+    private UUID getUUID(String otherIGN) {
+        Optional<PlayerInfo> playerOpt = mc.player.connection.getOnlinePlayers().stream()
+                .filter(p -> p.getProfile().getName().equalsIgnoreCase(otherIGN))
+                .findFirst();
+        if (playerOpt.isPresent()) {
+            return playerOpt.get().getProfile().getId();
+        } else {
+            RusherHackAPI.getNotificationManager().chat("Sorry lil bro couldn't find your 2nd acc");
+        }
+        return null;
+    }
+
+    protected void throwPearl() {
+        mc.player.setXRot(90);
+
+        if (mc.hitResult == null) return;
+        if (mc.hitResult.getType() == HitResult.Type.BLOCK) return;
 
         if (!InventoryUtil.isHolding(Items.ENDER_PEARL)) {
             int slot = InventoryUtils.findItemHotbar(Items.ENDER_PEARL);
@@ -508,87 +514,92 @@ public class StashMover extends ToggleableModule {
             }
 
             mc.player.getInventory().selected = slot;
-			return;
+            return;
         }
-		if(RusherHackAPI.getServerState().getPlayerPitch() == 90)
-			mc.player.connection.send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
-	}
-	protected void openChest(BlockPos pos){
-		if(pos == null) return;
-		if(pos.distSqr(mc.player.blockPosition()) > 9) return;
+        if (RusherHackAPI.getServerState().getPlayerPitch() == 90)
+            mc.player.connection.send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
+    }
 
-		RusherHackAPI.getRotationManager().updateRotation(pos);
-		if (isRotated(pos)) {
-			RusherHackAPI.interactions().useBlock(pos, InteractionHand.MAIN_HAND, true, false);
-		}
-	}
-	protected BlockPos getChest(){
-		BlockPos closestChest = null;
-		double shortestDistance = Integer.MAX_VALUE;
+    protected void openChest(BlockPos pos) {
+        if (pos == null) return;
+        if (pos.distSqr(mc.player.blockPosition()) > 9) return;
 
-		for(BlockEntity blockentity : WorldUtils.getBlockEntities(true)){
-			if(blacklistChests.contains(blockentity.getBlockPos())) continue;
+        RusherHackAPI.getRotationManager().updateRotation(pos);
+        if (isRotated(pos)) {
+            RusherHackAPI.interactions().useBlock(pos, InteractionHand.MAIN_HAND, true, false);
+        }
+    }
 
-			stealChests.add(blockentity.getBlockPos());
+    protected BlockPos getChest() {
+        BlockPos closestChest = null;
+        double shortestDistance = Integer.MAX_VALUE;
 
-			if(blockentity instanceof ChestBlockEntity chest){
-				if(ignoreSingular.getValue()){
-					if(chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) continue;
-				}
-				double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
+        for (BlockEntity blockentity : WorldUtils.getBlockEntities(true)) {
+            if (blacklistChests.contains(blockentity.getBlockPos())) continue;
 
-				if(distance < shortestDistance) {
-					shortestDistance = distance;
-					closestChest = blockentity.getBlockPos();
-				}
-			}
+            stealChests.add(blockentity.getBlockPos());
 
-		}
+            if (blockentity instanceof ChestBlockEntity chest) {
+                if (ignoreSingular.getValue()) {
+                    if (chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE))
+                        continue;
+                }
+                double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
 
-		if(closestChest == null) return null;
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    closestChest = blockentity.getBlockPos();
+                }
+            }
 
-		if(shortestDistance > 3){
-			BaritoneUtil.goTo(closestChest);
-		}
+        }
 
-		return closestChest;
-	}
+        if (closestChest == null) return null;
 
-	public BlockPos freeBlockAroundChest(BlockPos pos){
-		for(Direction direction : Direction.values()){
-			if(direction == Direction.DOWN || direction == Direction.UP){
-				continue;
-			}
-			BlockPos offsetPos = pos.relative(direction, 1);
+        if (shortestDistance > 3) {
+            BaritoneUtil.goTo(closestChest);
+        }
 
-			if(!mc.level.getBlockState(offsetPos).isAir()) continue;
-			if(mc.level.getBlockState(offsetPos.below()).isAir()) continue;
+        return closestChest;
+    }
 
-			return offsetPos;
-		}
-		return pos.above();
-	}
+    public BlockPos freeBlockAroundChest(BlockPos pos) {
+        for (Direction direction : Direction.values()) {
+            if (direction == Direction.DOWN || direction == Direction.UP) {
+                continue;
+            }
+            BlockPos offsetPos = pos.relative(direction, 1);
 
-	boolean isRotated(BlockPos pos){
-		return RusherHackAPI.getRotationManager().isLookingAt(pos);
-	}
+            if (!mc.level.getBlockState(offsetPos).isAir()) continue;
+            if (mc.level.getBlockState(offsetPos.below()).isAir()) continue;
 
-	protected enum MODES {
-		MOVER,
-		LOADER
-	}
-	protected enum MOVER{
-		LOOT,
-		SEND_LOAD_PEARL_MSG,
-		WAIT_FOR_PEARL,
-		WALKING_TO_CHEST,
-		THROWING_PEARL,
-		PUT_BACK_PEARLS,
-		ECHEST_LOOT,
-		ECHEST_FILL
-	}
-	protected enum LOADER{
-		LOAD_PEARL,
-		WAITING
-	}
+            return offsetPos;
+        }
+        return pos.above();
+    }
+
+    boolean isRotated(BlockPos pos) {
+        return RusherHackAPI.getRotationManager().isLookingAt(pos);
+    }
+
+    protected enum MODES {
+        MOVER,
+        LOADER
+    }
+
+    protected enum MOVER {
+        LOOT,
+        SEND_LOAD_PEARL_MSG,
+        WAIT_FOR_PEARL,
+        WALKING_TO_CHEST,
+        THROWING_PEARL,
+        PUT_BACK_PEARLS,
+        ECHEST_LOOT,
+        ECHEST_FILL
+    }
+
+    protected enum LOADER {
+        LOAD_PEARL,
+        WAITING
+    }
 }
