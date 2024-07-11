@@ -23,6 +23,7 @@ public class InventoryUtil {
     }
     public static void stealOnePearl(){
         if(!(mc.player.containerMenu instanceof ChestMenu menu)) return;;
+
         int slotCount = menu.getContainer().getContainerSize();
         for(int i = 0; i < slotCount; i++){
             if(menu.getContainer().getItem(i).isEmpty() || !menu.getContainer().getItem(i).getItem().equals(Items.ENDER_PEARL)) continue;

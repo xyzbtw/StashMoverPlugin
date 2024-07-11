@@ -58,6 +58,7 @@ public class StashMover extends ToggleableModule {
      */
     private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
     private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 1, 0, 10).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final NumberSetting<Integer> distance = new NumberSetting<>("ChestDistance", "Distance between you and lootchests", 100, 10, 1000).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting is2b = new BooleanSetting("Systemchat", "Changes chatpackets from player to system", true);
     private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
@@ -84,6 +85,7 @@ public class StashMover extends ToggleableModule {
             pearlChestPosition,
             chestForLoot;
     Timer lagTimer = new Timer();
+    int count = 0;
 
     /**
      * constructor
@@ -92,6 +94,7 @@ public class StashMover extends ToggleableModule {
         super("StashMover", "Moves stashes with pearls", ModuleCategory.CLIENT);
         this.registerSettings(
                 this.mode,
+                this.distance,
                 this.chestDelay,
                 this.useEchest,
                 this.is2b,
@@ -246,7 +249,7 @@ public class StashMover extends ToggleableModule {
                         blacklistChests.add(currentChest);
                         System.out.println("Added " + currentChest + " to blacklist");
                         mc.player.closeContainer();
-                        int count = 0;
+                        count = 0;
                         for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
                             if (e instanceof ChestBlockEntity chest) {
                                 if (ignoreSingular.getValue()) {
@@ -258,7 +261,6 @@ public class StashMover extends ToggleableModule {
                         }
                         if (!blacklistChests.isEmpty() && blacklistChests.size() >= count) {
                             moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
-                            this.toggle();
                             return;
                         }
                         return;
@@ -365,7 +367,8 @@ public class StashMover extends ToggleableModule {
 
 		if(!stealChests.isEmpty()){
 			for(BlockPos pos : stealChests){
-				if(blacklistChests.contains(pos)) continue;
+                if(pos.getCenter().distanceTo(mc.player.position()) > 14) continue;
+
 				renderer.drawBox(pos, true, true, new Color(255, 140, 0, 70).getRGB());
 			}
 		}
@@ -375,7 +378,6 @@ public class StashMover extends ToggleableModule {
 
     @Subscribe
     private void onAddEntity(EventEntity.Add event) {
-
         if (mode.getValue().equals(MODES.MOVER)) {
             if (event.getEntity() instanceof ThrownEnderpearl
                     && mode.getValue().equals(MODES.MOVER)
@@ -385,6 +387,9 @@ public class StashMover extends ToggleableModule {
             if (event.getEntity() instanceof Player
                     && ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
                 moverStatus = MOVER.WAIT_FOR_PEARL;
+                if (!blacklistChests.isEmpty() && blacklistChests.size() >= count) {
+                    toggle();
+                }
             }
         } else {
             if (event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())) {
@@ -544,7 +549,12 @@ public class StashMover extends ToggleableModule {
                     if (chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE))
                         continue;
                 }
+
+
+
                 double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
+
+                if(distance > this.distance.getValue()) continue;
 
                 if (distance < shortestDistance) {
                     shortestDistance = distance;
