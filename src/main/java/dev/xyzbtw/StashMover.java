@@ -66,6 +66,7 @@ public class StashMover extends ToggleableModule {
     private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
+    private final StringSetting loadMessage = new StringSetting("LoadMessage", "The message that both accounts use.", "LOAD PEARL");
 
     /**
      * variables
@@ -76,7 +77,6 @@ public class StashMover extends ToggleableModule {
     boolean hasThrownPearl = false;
     int chestTicks = 0;
     int ticksPassed = 0;
-    String LOADPEARLMSG = "LOAD PEARL";
     Vec3 chamber;
     List<BlockPos> blacklistChests = new ArrayList<>();
     BlockPos currentChest;
@@ -102,7 +102,8 @@ public class StashMover extends ToggleableModule {
                 this.is2b,
                 this.autoDisable,
                 this.ignoreSingular,
-                this.otherIGN
+                this.otherIGN,
+                this.loadMessage
         );
     }
 
@@ -146,7 +147,7 @@ public class StashMover extends ToggleableModule {
             switch (moverStatus) {
                 case SEND_LOAD_PEARL_MSG -> {
                     if (!sentMessage) {
-                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + LOADPEARLMSG);
+                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + loadMessage.getValue());
                         sentMessage = true;
                     }
                 }
@@ -425,7 +426,10 @@ public class StashMover extends ToggleableModule {
             String contents = systemChat.content().getString();
             System.out.println(contents);
 
-            if (contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + LOADPEARLMSG) || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + LOADPEARLMSG)) {
+            if (    contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + loadMessage.getValue())
+                    || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + loadMessage.getValue())
+                    || contents.equalsIgnoreCase(otherIGN.getValue() + " whispers to you: " + loadMessage.getValue())
+            ) {
                 loaderStatus = LOADER.LOAD_PEARL;
             }
 
@@ -433,7 +437,7 @@ public class StashMover extends ToggleableModule {
 
             if (!is2b.getValue()) {
                 String message = chatPacket.body().content();
-                if (message.equalsIgnoreCase(LOADPEARLMSG)) loaderStatus = LOADER.LOAD_PEARL;
+                if (message.equalsIgnoreCase(loadMessage.getValue())) loaderStatus = LOADER.LOAD_PEARL;
             }
         }
 
@@ -560,8 +564,6 @@ public class StashMover extends ToggleableModule {
                         continue;
                 }
 
-
-
                 double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
 
                 if(distance > this.distance.getValue()) continue;
@@ -581,7 +583,7 @@ public class StashMover extends ToggleableModule {
         if (closestChest == null) return null;
 
         if (shortestDistance > 3) {
-            BaritoneUtil.goTo(closestChest);
+            BaritoneUtil.goTo(new BlockPos(closestChest.getX(), mc.player.getBlockY(), closestChest.getZ()));
         }
 
         return closestChest;
