@@ -408,7 +408,10 @@ public class StashMover extends ToggleableModule {
             if (event.getEntity() instanceof Player
                     && ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
                 moverStatus = MOVER.WAIT_FOR_PEARL;
-                if(disableOnceTP) this.toggle();
+                if(disableOnceTP){
+                    this.toggle();
+                    disableOnceTP = false;
+                }
             }
             return;
         }
