@@ -124,7 +124,6 @@ public class StashMover extends ToggleableModule {
     private void onUpdate(EventUpdate event) {
         if (mc.player == null || mc.level == null) return;
 
-        System.out.println(moverStatus);
         if (mode.getValue().equals(MODES.MOVER)) {
             if (pearlChestPosition == null || chestForLoot == null) {
                 RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
@@ -359,7 +358,6 @@ public class StashMover extends ToggleableModule {
         if (mode.getValue().equals(MODES.LOADER)) {
             switch (loaderStatus) {
                 case WAITING -> {
-                    System.out.println("just waiting yk");
                     return;
                 }
                 case LOAD_PEARL -> {
@@ -367,7 +365,6 @@ public class StashMover extends ToggleableModule {
                         BaritoneUtil.goTo(BlockPos.containing(chamber));
                         return;
                     }
-                    System.out.println("interacting at " + chamber);
                     RusherHackAPI.getRotationManager().updateRotation(BlockPos.containing(chamber));
                     RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
                     loaderStatus = LOADER.WAITING;
@@ -431,9 +428,7 @@ public class StashMover extends ToggleableModule {
         if (!mode.getValue().equals(MODES.LOADER)) return;
 
         if (event.getPacket() instanceof ClientboundSystemChatPacket systemChat && is2b.getValue()) {
-
             String contents = systemChat.content().getString();
-            System.out.println(contents);
 
             if (    contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + loadMessage.getValue())
                     || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + loadMessage.getValue())
