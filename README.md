@@ -27,5 +27,7 @@ You can set a custom load message on both accounts, which they will send/check.
 default is "LOAD PEARL"
 you can change it to something random like ijlhfsd
 
+# Have an extra pearl set just in case please
+
 
 
