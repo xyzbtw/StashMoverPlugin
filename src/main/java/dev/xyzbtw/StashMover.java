@@ -166,18 +166,19 @@ public class StashMover extends ToggleableModule {
                     if (InventoryUtils.findItemHotbar(Items.ENDER_PEARL) == -1) {
                         InventoryUtil.stealOnePearl();
                         return;
-                    } else {
-                        mc.player.closeContainer();
-                        moverStatus = MOVER.THROWING_PEARL;
                     }
+
+                    mc.player.closeContainer();
+                    moverStatus = MOVER.THROWING_PEARL;
+
 
                 }
                 case THROWING_PEARL -> {
                     throwPearl();
-                    if (hasThrownPearl) {
-                        moverStatus = MOVER.PUT_BACK_PEARLS;
-                        hasThrownPearl = false;
-                    }
+                    if (!hasThrownPearl) return;
+
+                    moverStatus = MOVER.PUT_BACK_PEARLS;
+                    hasThrownPearl = false;
                 }
                 case PUT_BACK_PEARLS -> {
                     if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
@@ -205,36 +206,38 @@ public class StashMover extends ToggleableModule {
                 case ECHEST_LOOT -> {
                     if (filledEchest || !useEchest.getValue())
                         moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
-                    if (!filledEchest && !InventoryUtil.isInventoryEmpty()) { // put shit into echest
-                        if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
-                            BaritoneUtil.goTo(Blocks.ENDER_CHEST);
-                            return;
-                        }
 
-                        if (InventoryUtil.isChestFull() || InventoryUtil.isInventoryEmpty()) {
-                            filledEchest = true;
-                            mc.player.closeContainer();
-                            moverStatus = MOVER.LOOT;
-                            return;
-                        }
+                    if(filledEchest) return;
 
-                        chestTicks++;
-                        for (int i = menu.getContainer().getContainerSize(); i < menu.getContainer().getContainerSize() + 36; i++) {
-                            if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
-                            if (chestTicks < chestDelay.getValue()) return;
-
-                            InventoryUtils.clickSlot(i, true);
-                            chestTicks = 0;
-                        }
-
+                    if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
+                        BaritoneUtil.goTo(Blocks.ENDER_CHEST);
                         return;
                     }
+
+                    if (InventoryUtil.isChestFull() || InventoryUtil.isInventoryEmpty()) {
+                        filledEchest = true;
+                        mc.player.closeContainer();
+                        moverStatus = MOVER.LOOT;
+                        return;
+                    }
+
+                    chestTicks++;
+                    for (int i = menu.getContainer().getContainerSize(); i < menu.getContainer().getContainerSize() + 36; i++) {
+                        if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+                        if (chestTicks < chestDelay.getValue()) return;
+
+                        InventoryUtils.clickSlot(i, true);
+                        chestTicks = 0;
+                    }
+
+                    return;
                 }
                 case LOOT -> {
                     if (mc.player.isDeadOrDying()) {
                         mc.player.respawn();
                         return;
                     }
+
                     if (InventoryUtils.isInventoryFull()) {
                         moverStatus = MOVER.ECHEST_LOOT;
                         if (filledEchest || !useEchest.getValue())
@@ -250,43 +253,45 @@ public class StashMover extends ToggleableModule {
                         return;
                     }
 
-                    if (InventoryUtil.isChestEmpty()) {
-                        blacklistChests.add(currentChest);
+                    if(!InventoryUtil.isChestEmpty()){
+                        chestTicks++;
+                        for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
+                            if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
+                            if (chestTicks < chestDelay.getValue()) return;
 
-                        for(BlockEntity e : WorldUtils.getBlockEntities(true)) {
-                            if (e instanceof ChestBlockEntity chest) {
-                                if(blacklistChests.contains(e.getBlockPos())){
-                                    if(!chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)){
-                                        Direction facing = ChestBlock.getConnectedDirection(chest.getBlockState());
-                                        blacklistChests.add(chest.getBlockPos().relative(facing));
-                                    }
-                                }
-                            }
-                        }
-
-
-                        mc.player.closeContainer();
-
-                        if (new HashSet<>(blacklistChests).containsAll(WorldUtils.getBlockEntities(true)
-                                .stream()
-                                .filter(e -> e instanceof ChestBlockEntity)
-                                .filter(e -> !e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE) || !ignoreSingular.getValue())
-                                .map(BlockEntity::getBlockPos).collect(Collectors.toSet()))) {
-                            moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
-                            disableOnceTP = true;
-                            return;
+                            InventoryUtils.clickSlot(i, true);
+                            chestTicks = 0;
                         }
                         return;
                     }
 
-                    chestTicks++;
-                    for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
-                        if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
-                        if (chestTicks < chestDelay.getValue()) return;
+                    blacklistChests.add(currentChest);
 
-                        InventoryUtils.clickSlot(i, true);
-                        chestTicks = 0;
+                    for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
+                        if (e instanceof ChestBlockEntity chest) {
+                            if (blacklistChests.contains(e.getBlockPos())) {
+                                if (!chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) {
+                                    Direction facing = ChestBlock.getConnectedDirection(chest.getBlockState());
+                                    blacklistChests.add(chest.getBlockPos().relative(facing));
+                                }
+                            }
+                        }
                     }
+
+
+                    mc.player.closeContainer();
+
+                    if (new HashSet<>(blacklistChests).containsAll(WorldUtils.getBlockEntities(true)
+                            .stream()
+                            .filter(e -> e instanceof ChestBlockEntity)
+                            .filter(e -> !e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE) || !ignoreSingular.getValue())
+                            .map(BlockEntity::getBlockPos).collect(Collectors.toSet()))) {
+                        moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+                        disableOnceTP = true;
+                        return;
+                    }
+                    return;
+
                 }
                 case WALKING_TO_CHEST -> {
 
@@ -405,11 +410,13 @@ public class StashMover extends ToggleableModule {
                 moverStatus = MOVER.WAIT_FOR_PEARL;
                 if(disableOnceTP) this.toggle();
             }
-        } else {
-            if (event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())) {
-                RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
-            }
+            return;
         }
+
+        if (event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())) {
+            RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
+        }
+
     }
 
     @Subscribe
