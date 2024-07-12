@@ -22,6 +22,8 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.rusherhack.client.api.RusherHackAPI;
 import org.rusherhack.client.api.events.client.EventUpdate;
+import org.rusherhack.client.api.events.client.chat.EventAddChat;
+import org.rusherhack.client.api.events.client.chat.EventChatMessage;
 import org.rusherhack.client.api.events.network.EventPacket;
 import org.rusherhack.client.api.events.render.EventRender3D;
 import org.rusherhack.client.api.events.world.EventEntity;
@@ -62,7 +64,6 @@ public class StashMover extends ToggleableModule {
     private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
     private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 1, 0, 10).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final NumberSetting<Integer> distance = new NumberSetting<>("ChestDistance", "Distance between you and lootchests", 100, 10, 1000).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
-    private final BooleanSetting is2b = new BooleanSetting("Systemchat", "Changes chatpackets from player to system", true);
     private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
@@ -100,7 +101,6 @@ public class StashMover extends ToggleableModule {
                 this.distance,
                 this.chestDelay,
                 this.useEchest,
-                this.is2b,
                 this.autoDisable,
                 this.ignoreSingular,
                 this.otherIGN,
@@ -267,7 +267,7 @@ public class StashMover extends ToggleableModule {
 
                         mc.player.closeContainer();
 
-                        if (blacklistChests.containsAll(WorldUtils.getBlockEntities(true)
+                        if (new HashSet<>(blacklistChests).containsAll(WorldUtils.getBlockEntities(true)
                                 .stream()
                                 .filter(e -> e instanceof ChestBlockEntity)
                                 .filter(e -> !e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE) || !ignoreSingular.getValue())
@@ -425,26 +425,6 @@ public class StashMover extends ToggleableModule {
 
         lagTimer.reset();
 
-        if (!mode.getValue().equals(MODES.LOADER)) return;
-
-        if (event.getPacket() instanceof ClientboundSystemChatPacket systemChat && is2b.getValue()) {
-            String contents = systemChat.content().getString();
-
-            if (    contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + loadMessage.getValue())
-                    || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + loadMessage.getValue())
-                    || contents.equalsIgnoreCase(otherIGN.getValue() + " whispers to you: " + loadMessage.getValue())
-            ) {
-                loaderStatus = LOADER.LOAD_PEARL;
-            }
-
-        } else if (event.getPacket() instanceof ClientboundPlayerChatPacket chatPacket) {
-
-            if (!is2b.getValue()) {
-                String message = chatPacket.body().content();
-                if (message.equalsIgnoreCase(loadMessage.getValue())) loaderStatus = LOADER.LOAD_PEARL;
-            }
-        }
-
     }
 
     protected String getLookPos(String string) {
@@ -470,16 +450,10 @@ public class StashMover extends ToggleableModule {
 
     @Override
     public String getMetadata() {
-        switch (mode.getValue()) {
-            case LOADER -> {
-                return loaderStatus.name();
-            }
-            case MOVER -> {
-                return moverStatus.name();
-            }
-        }
-
-        return "";
+        return switch (mode.getValue()){
+            case LOADER -> loaderStatus.name();
+            case MOVER -> moverStatus.name();
+        };
     }
 
     @Override
@@ -505,18 +479,17 @@ public class StashMover extends ToggleableModule {
 
         };
     }
+    @Subscribe
+    private void onChat(EventAddChat event) {
+        if(!mode.getValue().equals(MODES.LOADER)) return;
 
-
-    private UUID getUUID(String otherIGN) {
-        Optional<PlayerInfo> playerOpt = mc.player.connection.getOnlinePlayers().stream()
-                .filter(p -> p.getProfile().getName().equalsIgnoreCase(otherIGN))
-                .findFirst();
-        if (playerOpt.isPresent()) {
-            return playerOpt.get().getProfile().getId();
-        } else {
-            RusherHackAPI.getNotificationManager().chat("Sorry lil bro couldn't find your 2nd acc");
+        String contents = event.getChatComponent().getString();
+        if (    contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + loadMessage.getValue())
+                || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + loadMessage.getValue())
+                || contents.equalsIgnoreCase(otherIGN.getValue() + " whispers to you: " + loadMessage.getValue())
+        ) {
+            loaderStatus = LOADER.LOAD_PEARL;
         }
-        return null;
     }
 
     protected void throwPearl() {
