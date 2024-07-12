@@ -280,21 +280,26 @@ public class StashMover extends ToggleableModule {
                 }
                 case WALKING_TO_CHEST -> {
 
+                    if(mc.player.isDeadOrDying()) {
+                        mc.player.respawn();
+                        moverStatus = MOVER.LOOT;
+                        return;
+                    }
+
                     if (mc.player.distanceToSqr(chestForLoot.getX(), chestForLoot.getY(), chestForLoot.getZ()) > 9) {
                         BaritoneUtil.goTo(freeBlockAroundChest(chestForLoot));
                         return;
                     }
 
                     if (InventoryUtil.isInventoryEmpty()) {
-
                         if (filledEchest && useEchest.getValue()) {
                             moverStatus = MOVER.ECHEST_FILL;
                             mc.player.closeContainer();
                             return;
                         }
 
-                        moverStatus = MOVER.LOOT;
                         mc.player.connection.sendCommand("kill");
+
                         return;
                     }
 
@@ -552,7 +557,7 @@ public class StashMover extends ToggleableModule {
 
     protected BlockPos getChest() {
 
-        if(mc.player.isDeadOrDying()) return null;
+        if(mc.player.isDeadOrDying() || mc.player.position().distanceTo(chestForLoot.getCenter()) < 6) return null;
 
         BlockPos closestChest = null;
         double shortestDistance = Integer.MAX_VALUE;
@@ -566,6 +571,8 @@ public class StashMover extends ToggleableModule {
                     if (chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE))
                         continue;
                 }
+
+                if(chest.getBlockPos().getCenter().distanceTo(chestForLoot.getCenter()) < 12) continue;
 
                 double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
 
