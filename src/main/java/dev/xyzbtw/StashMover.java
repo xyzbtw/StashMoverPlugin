@@ -46,6 +46,7 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
 
 /**
  * A module that moves stashes for you
@@ -114,6 +115,7 @@ public class StashMover extends ToggleableModule {
         loaderStatus = LOADER.WAITING;
     }
 
+
     /**
      * methods
      */
@@ -122,6 +124,7 @@ public class StashMover extends ToggleableModule {
     private void onUpdate(EventUpdate event) {
         if (mc.player == null || mc.level == null) return;
 
+        System.out.println(moverStatus);
         if (mode.getValue().equals(MODES.MOVER)) {
             if (pearlChestPosition == null || chestForLoot == null) {
                 RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
@@ -250,19 +253,26 @@ public class StashMover extends ToggleableModule {
 
                     if (InventoryUtil.isChestEmpty()) {
                         blacklistChests.add(currentChest);
-                        System.out.println("Added " + currentChest + " to blacklist");
-                        mc.player.closeContainer();
-                        count = 0;
-                        for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
+
+                        for(BlockEntity e : WorldUtils.getBlockEntities(true)) {
                             if (e instanceof ChestBlockEntity chest) {
-                                if (ignoreSingular.getValue()) {
-                                    if (chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE))
-                                        continue;
+                                if(blacklistChests.contains(e.getBlockPos())){
+                                    if(!chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)){
+                                        Direction facing = ChestBlock.getConnectedDirection(chest.getBlockState());
+                                        blacklistChests.add(chest.getBlockPos().relative(facing));
+                                    }
                                 }
-                                count++;
                             }
                         }
-                        if (!blacklistChests.isEmpty() && blacklistChests.size() >= count) {
+
+
+                        mc.player.closeContainer();
+
+                        if (blacklistChests.containsAll(WorldUtils.getBlockEntities(true)
+                                .stream()
+                                .filter(e -> e instanceof ChestBlockEntity)
+                                .filter(e -> !e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE) || !ignoreSingular.getValue())
+                                .map(BlockEntity::getBlockPos).collect(Collectors.toSet()))) {
                             moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
                             return;
                         }
@@ -395,9 +405,6 @@ public class StashMover extends ToggleableModule {
             if (event.getEntity() instanceof Player
                     && ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
                 moverStatus = MOVER.WAIT_FOR_PEARL;
-                if (!blacklistChests.isEmpty() && blacklistChests.size() >= count) {
-                    toggle();
-                }
             }
         } else {
             if (event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())) {
@@ -408,9 +415,6 @@ public class StashMover extends ToggleableModule {
 
     @Subscribe
     public void onPacketSend(EventPacket.Send event) {
-        if (event.getPacket() instanceof ServerboundContainerClosePacket) {
-            currentChest = null;
-        }
         if (event.getPacket() instanceof ServerboundUseItemOnPacket packet) {
             if (mc.level.getBlockState(packet.getHitResult().getBlockPos()).getBlock() instanceof ChestBlock) {
                 currentChest = packet.getHitResult().getBlockPos();
@@ -546,7 +550,7 @@ public class StashMover extends ToggleableModule {
 
     protected void openChest(BlockPos pos) {
         if (pos == null) return;
-        if (pos.distSqr(mc.player.blockPosition()) > 9) return;
+        if (pos.getCenter().distanceTo(mc.player.getEyePosition()) > 4.5) return;
 
         BaritoneUtil.stopBaritone();
         RusherHackAPI.getRotationManager().updateRotation(pos);
@@ -574,7 +578,7 @@ public class StashMover extends ToggleableModule {
 
                 if(chest.getBlockPos().getCenter().distanceTo(chestForLoot.getCenter()) < 12) continue;
 
-                double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
+                double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.getEyePosition());
 
                 if(distance > this.distance.getValue()) continue;
 
@@ -592,8 +596,8 @@ public class StashMover extends ToggleableModule {
 
         if (closestChest == null) return null;
 
-        if (shortestDistance > 3) {
-            BaritoneUtil.goTo(new BlockPos(closestChest.getX(), mc.player.getBlockY(), closestChest.getZ()));
+        if (shortestDistance > 4.5) {
+            BaritoneUtil.goTo(closestChest);
         }
 
         return closestChest;
