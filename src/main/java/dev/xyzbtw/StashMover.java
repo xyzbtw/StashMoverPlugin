@@ -95,7 +95,7 @@ public class StashMover extends ToggleableModule {
      * constructor
      */
     public StashMover() {
-        super("StashMover", "Moves stashes with pearls", ModuleCategory.CLIENT);
+        super("StashMover", "Moves stashes with pearls", ModuleCategory.MISC);
         this.registerSettings(
                 this.mode,
                 this.distance,
