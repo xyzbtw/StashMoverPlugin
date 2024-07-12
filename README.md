@@ -1,4 +1,4 @@
-## Main branch is 1.20.6.
+# Main branch is 1.20.6.
 Change it in gradle.properties, refresh gradle, and build to have another version of mc.
 
 Loader 
@@ -20,6 +20,12 @@ Set the chest where it's going to put everything into. Using *stashmover lootche
 Video instructions:
 https://youtu.be/gfnNFyRQavA
 
+
+
+# Optional
+You can set a custom load message on both accounts, which they will send/check.
+default is "LOAD PEARL"
+you can change it to something random like ijlhfsd
 
 
 
