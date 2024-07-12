@@ -551,6 +551,9 @@ public class StashMover extends ToggleableModule {
     }
 
     protected BlockPos getChest() {
+
+        if(mc.player.isDeadOrDying()) return null;
+
         BlockPos closestChest = null;
         double shortestDistance = Integer.MAX_VALUE;
 
