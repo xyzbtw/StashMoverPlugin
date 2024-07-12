@@ -571,15 +571,11 @@ public class StashMover extends ToggleableModule {
                         continue;
                 }
 
-                if(chest.getBlockPos().getCenter().distanceTo(chestForLoot.getCenter()) < 12) continue;
-
                 double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.getEyePosition());
 
                 if(distance > this.distance.getValue()) continue;
 
                 stealChests.add(blockentity.getBlockPos());
-
-                blacklistChests.forEach(stealChests::remove);
 
                 if (distance < shortestDistance) {
                     shortestDistance = distance;
@@ -588,6 +584,7 @@ public class StashMover extends ToggleableModule {
             }
 
         }
+        stealChests.removeAll(blacklistChests);
 
         if (closestChest == null) return null;
 
