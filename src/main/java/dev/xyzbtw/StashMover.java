@@ -11,6 +11,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.FireworkRocketItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -417,19 +418,24 @@ public class StashMover extends ToggleableModule {
         lagTimer.reset();
 
         if (!mode.getValue().equals(MODES.LOADER)) return;
+
         if (event.getPacket() instanceof ClientboundSystemChatPacket systemChat && is2b.getValue()) {
+
             String contents = systemChat.content().getString();
             System.out.println(contents);
+
             if (contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + LOADPEARLMSG) || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + LOADPEARLMSG)) {
                 loaderStatus = LOADER.LOAD_PEARL;
             }
 
         } else if (event.getPacket() instanceof ClientboundPlayerChatPacket chatPacket) {
+
             if (!is2b.getValue()) {
                 String message = chatPacket.body().content();
                 if (message.equalsIgnoreCase(LOADPEARLMSG)) loaderStatus = LOADER.LOAD_PEARL;
             }
         }
+
     }
 
     protected String getLookPos(String string) {
@@ -529,6 +535,7 @@ public class StashMover extends ToggleableModule {
         if (pos == null) return;
         if (pos.distSqr(mc.player.blockPosition()) > 9) return;
 
+        BaritoneUtil.stopBaritone();
         RusherHackAPI.getRotationManager().updateRotation(pos);
         if (isRotated(pos)) {
             RusherHackAPI.interactions().useBlock(pos, InteractionHand.MAIN_HAND, true, false);
@@ -542,7 +549,6 @@ public class StashMover extends ToggleableModule {
         for (BlockEntity blockentity : WorldUtils.getBlockEntities(true)) {
             if (blacklistChests.contains(blockentity.getBlockPos())) continue;
 
-            stealChests.add(blockentity.getBlockPos());
 
             if (blockentity instanceof ChestBlockEntity chest) {
                 if (ignoreSingular.getValue()) {
@@ -555,6 +561,10 @@ public class StashMover extends ToggleableModule {
                 double distance = blockentity.getBlockPos().getCenter().distanceTo(mc.player.position());
 
                 if(distance > this.distance.getValue()) continue;
+
+                stealChests.add(blockentity.getBlockPos());
+
+                blacklistChests.forEach(stealChests::remove);
 
                 if (distance < shortestDistance) {
                     shortestDistance = distance;

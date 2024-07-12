@@ -20,6 +20,9 @@ public class BaritoneUtil {
             baritone.getGetToBlockProcess().getToBlock(block);
         }
     }
+    public static void stopBaritone(){
+        baritone.getPathingBehavior().cancelEverything();
+    }
 
 
 
