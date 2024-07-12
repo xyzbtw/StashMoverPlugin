@@ -30,6 +30,7 @@ import org.rusherhack.client.api.feature.module.ModuleCategory;
 import org.rusherhack.client.api.feature.module.ToggleableModule;
 import org.rusherhack.client.api.render.IRenderer3D;
 import org.rusherhack.client.api.utils.InventoryUtils;
+import org.rusherhack.client.api.utils.RotationUtils;
 import org.rusherhack.client.api.utils.WorldUtils;
 import org.rusherhack.core.command.annotations.CommandExecutor;
 import org.rusherhack.core.event.subscribe.Subscribe;
@@ -512,6 +513,7 @@ public class StashMover extends ToggleableModule {
 
     protected void throwPearl() {
         mc.player.setXRot(90);
+        mc.player.setYRot(RotationUtils.getRotations(pearlChestPosition.getCenter())[0]);
 
         if (mc.hitResult == null) return;
         if (mc.hitResult.getType() == HitResult.Type.BLOCK) return;
@@ -527,8 +529,10 @@ public class StashMover extends ToggleableModule {
             mc.player.getInventory().selected = slot;
             return;
         }
-        if (RusherHackAPI.getServerState().getPlayerPitch() == 90)
+
+        if (RusherHackAPI.getServerState().getPlayerPitch() == 90 && mc.player.getXRot() == 90) {
             mc.player.connection.send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
+        }
     }
 
     protected void openChest(BlockPos pos) {
