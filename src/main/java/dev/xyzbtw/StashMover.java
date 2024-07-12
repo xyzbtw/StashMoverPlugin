@@ -84,12 +84,12 @@ public class StashMover extends ToggleableModule {
     BlockPos currentChest;
     boolean sentMessage = false;
     boolean filledEchest = false;
+    boolean disableOnceTP = false;
     Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
     public static BlockPos LOADER_BACK_POSITION,
             pearlChestPosition,
             chestForLoot;
     Timer lagTimer = new Timer();
-    int count = 0;
 
     /**
      * constructor
@@ -273,6 +273,7 @@ public class StashMover extends ToggleableModule {
                                 .filter(e -> !e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE) || !ignoreSingular.getValue())
                                 .map(BlockEntity::getBlockPos).collect(Collectors.toSet()))) {
                             moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
+                            disableOnceTP = true;
                             return;
                         }
                         return;
@@ -402,6 +403,7 @@ public class StashMover extends ToggleableModule {
             if (event.getEntity() instanceof Player
                     && ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
                 moverStatus = MOVER.WAIT_FOR_PEARL;
+                if(disableOnceTP) this.toggle();
             }
         } else {
             if (event.getEntity() instanceof Player player && player.getGameProfile().getName().equalsIgnoreCase(otherIGN.getValue())) {
