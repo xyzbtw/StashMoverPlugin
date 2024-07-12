@@ -1,5 +1,5 @@
-## Main branch is 1.20.6, you can change branches to get 1.20.4 version
-
+## Main branch is 1.20.6.
+Change it in gradle.properties, refresh gradle, and build to have another version of mc.
 
 Loader 
 -------
