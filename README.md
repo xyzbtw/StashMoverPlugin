@@ -22,6 +22,10 @@ Set chamber position (top of chamber) using *stashmover water
 Video instructions:
 https://youtu.be/gfnNFyRQavA
 
+Testing videos
+https://youtu.be/nOMEOkEV7NI
+https://youtu.be/H-vNh98iq1Y
+
 
 
 # Optional
