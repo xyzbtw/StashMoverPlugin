@@ -158,6 +158,7 @@ public class StashMover extends ToggleableModule {
                         String randomUUID = UUID.randomUUID().toString();
                         String shortUUID = randomUUID.substring(0, 8);
                         mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + loadMessage.getValue() + " " + shortUUID);
+                        ticksPassed = -40;
                     }
                 }
                 case WAIT_FOR_PEARL -> {
@@ -180,6 +181,7 @@ public class StashMover extends ToggleableModule {
                     throwPearl();
                     if (!hasThrownPearl) return;
 
+                    BaritoneUtil.stopBaritone();
                     moverStatus = MOVER.PUT_BACK_PEARLS;
                     hasThrownPearl = false;
                 }
@@ -412,6 +414,7 @@ public class StashMover extends ToggleableModule {
             if (event.getEntity() instanceof Player
                     && ((Player) event.getEntity()).getGameProfile().getName().equals(otherIGN.getValue())) {
                 moverStatus = MOVER.WAIT_FOR_PEARL;
+                ticksPassed = 0;
                 if(disableOnceTP){
                     this.toggle();
                     disableOnceTP = false;
@@ -512,7 +515,7 @@ public class StashMover extends ToggleableModule {
             ) {
                 String randomUUID = UUID.randomUUID().toString();
                 String shortUUID = randomUUID.substring(0, 8);
-                mc.player.connection.sendCommand("msg " + otherIGN.getValue() + "RECEIVED MESSAGE" + shortUUID);
+                mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " RECEIVED MESSAGE " + shortUUID);
                 loaderStatus = LOADER.LOAD_PEARL;
             }
         }
@@ -552,8 +555,7 @@ public class StashMover extends ToggleableModule {
             return;
         }
 
-        if (RusherHackAPI.getServerState().getPlayerPitch() == 90 && mc.player.getXRot() == 90) {
-            //mc.player.connection.send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
+        if (mc.player.getXRot() == 90) {
             mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
         }
     }
