@@ -5,12 +5,14 @@ import dev.xyzbtw.utils.InventoryUtil;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.PacketUtils;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.item.FireworkRocketItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.*;
@@ -48,6 +50,7 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -88,7 +91,9 @@ public class StashMover extends ToggleableModule {
     Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
     public static BlockPos LOADER_BACK_POSITION,
             pearlChestPosition,
-            chestForLoot;
+            chestForLoot,
+            waterPos
+    ;
     Timer lagTimer = new Timer();
 
     /**
@@ -113,6 +118,7 @@ public class StashMover extends ToggleableModule {
         super.onEnable();
         moverStatus = MOVER.LOOT;
         loaderStatus = LOADER.WAITING;
+        sentMessage = false;
     }
 
 
@@ -125,7 +131,7 @@ public class StashMover extends ToggleableModule {
         if (mc.player == null || mc.level == null) return;
 
         if (mode.getValue().equals(MODES.MOVER)) {
-            if (pearlChestPosition == null || chestForLoot == null) {
+            if (pearlChestPosition == null || chestForLoot == null || waterPos == null) {
                 RusherHackAPI.getNotificationManager().send(NotificationType.ERROR, "One of your positions isn't set big boy");
                 this.toggle();
                 return;
@@ -149,16 +155,14 @@ public class StashMover extends ToggleableModule {
             switch (moverStatus) {
                 case SEND_LOAD_PEARL_MSG -> {
                     if (!sentMessage) {
-                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + loadMessage.getValue());
-                        sentMessage = true;
+                        String randomUUID = UUID.randomUUID().toString();
+                        String shortUUID = randomUUID.substring(0, 8);
+                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + loadMessage.getValue() + " " + shortUUID);
                     }
                 }
                 case WAIT_FOR_PEARL -> {
                     sentMessage = false;
-                    if (mc.player.distanceToSqr(pearlChestPosition.getX(), pearlChestPosition.getY(), pearlChestPosition.getZ()) > 9) {
-                        return;
-                    }
-                    if (!(mc.player.containerMenu instanceof ChestMenu)) {
+                    if (!(mc.player.containerMenu instanceof ChestMenu) && !(mc.player.containerMenu instanceof ShulkerBoxMenu)) {
                         openChest(pearlChestPosition);
                         return;
                     }
@@ -170,10 +174,9 @@ public class StashMover extends ToggleableModule {
 
                     mc.player.closeContainer();
                     moverStatus = MOVER.THROWING_PEARL;
-
-
                 }
                 case THROWING_PEARL -> {
+                    BaritoneUtil.goTo(waterPos);
                     throwPearl();
                     if (!hasThrownPearl) return;
 
@@ -280,6 +283,7 @@ public class StashMover extends ToggleableModule {
 
 
                     mc.player.closeContainer();
+                    ticksPassed = -5; //delay between each chest i guess
 
                     if (new HashSet<>(blacklistChests).containsAll(WorldUtils.getBlockEntities(true)
                             .stream()
@@ -367,7 +371,7 @@ public class StashMover extends ToggleableModule {
                     return;
                 }
                 case LOAD_PEARL -> {
-                    if (chamber.distanceTo(mc.player.position()) > 3) {
+                    if (chamber.distanceTo(mc.player.position()) > 4) {
                         BaritoneUtil.goTo(BlockPos.containing(chamber));
                         return;
                     }
@@ -436,7 +440,6 @@ public class StashMover extends ToggleableModule {
         if (mc.player == null || mc.level == null) return;
 
         lagTimer.reset();
-
     }
 
     protected String getLookPos(String string) {
@@ -488,28 +491,54 @@ public class StashMover extends ToggleableModule {
                 chamber = mc.hitResult != null ? mc.hitResult.getLocation() : null;
                 return "Set chamber position.";
             }
+            @CommandExecutor(subCommand = "water")
+            private String setWaterPos() {
+                waterPos = mc.player.blockPosition();
+                return "Set water position.";
+            }
 
         };
     }
     @Subscribe
     private void onChat(EventAddChat event) {
-        if(!mode.getValue().equals(MODES.LOADER)) return;
 
         String contents = event.getChatComponent().getString();
-        if (    contents.equalsIgnoreCase(otherIGN.getValue() + " whispers: " + loadMessage.getValue())
-                || contents.equalsIgnoreCase("From " + otherIGN.getValue() + ": " + loadMessage.getValue())
-                || contents.equalsIgnoreCase(otherIGN.getValue() + " whispers to you: " + loadMessage.getValue())
-        ) {
-            loaderStatus = LOADER.LOAD_PEARL;
+
+        if(mode.getValue().equals(MODES.LOADER)) {
+            if (
+                    (contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers: " + loadMessage.getValue()))
+                            || (contents.startsWith("From " + otherIGN.getValue()) && contents.contains(": " + loadMessage.getValue()))
+                            || (contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers to you: " + loadMessage.getValue()))
+            ) {
+                String randomUUID = UUID.randomUUID().toString();
+                String shortUUID = randomUUID.substring(0, 8);
+                mc.player.connection.sendCommand("msg " + otherIGN.getValue() + "RECEIVED MESSAGE" + shortUUID);
+                loaderStatus = LOADER.LOAD_PEARL;
+            }
         }
+
+        if(mode.getValue().equals(MODES.MOVER)) {
+            if(
+                    contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers: RECEIVED MESSAGE")
+                    || contents.startsWith("From " + otherIGN.getValue() + ": ") && contents.contains("RECEIVED MESSAGE")
+                    || contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers to you: RECEIVED MESSAGE")
+            )
+            {
+                sentMessage = true;
+            }
+        }
+
     }
 
     protected void throwPearl() {
         mc.player.setXRot(90);
         mc.player.setYRot(RotationUtils.getRotations(pearlChestPosition.getCenter())[0]);
 
-        if (mc.hitResult == null) return;
-        if (mc.hitResult.getType() == HitResult.Type.BLOCK) return;
+        if (mc.hitResult == null) {
+            System.out.println("SOMEHOW NULLLLLL");
+            return;
+        }
+        if (mc.hitResult.getType().equals(HitResult.Type.BLOCK)) return;
 
         if (!InventoryUtil.isHolding(Items.ENDER_PEARL)) {
             int slot = InventoryUtils.findItemHotbar(Items.ENDER_PEARL);
@@ -524,7 +553,8 @@ public class StashMover extends ToggleableModule {
         }
 
         if (RusherHackAPI.getServerState().getPlayerPitch() == 90 && mc.player.getXRot() == 90) {
-            mc.player.connection.send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
+            //mc.player.connection.send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, 0));
+            mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
         }
     }
 
@@ -534,6 +564,7 @@ public class StashMover extends ToggleableModule {
 
         BaritoneUtil.stopBaritone();
         RusherHackAPI.getRotationManager().updateRotation(pos);
+
         if (isRotated(pos)) {
             RusherHackAPI.interactions().useBlock(pos, InteractionHand.MAIN_HAND, true, false);
         }
@@ -569,7 +600,7 @@ public class StashMover extends ToggleableModule {
             }
 
         }
-        stealChests.removeAll(blacklistChests);
+        blacklistChests.forEach(stealChests::remove);
 
         if (closestChest == null) return null;
 
