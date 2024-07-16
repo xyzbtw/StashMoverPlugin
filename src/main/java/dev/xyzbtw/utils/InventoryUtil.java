@@ -61,5 +61,11 @@ public class InventoryUtil {
         }
         return true;
     }
+    public static void clickSlot(int slotId, boolean shiftClick) {
+        if(mc.player == null || mc.gameMode == null) {
+            return;
+        }
 
+        mc.gameMode.handleInventoryMouseClick(mc.player.containerMenu.containerId, slotId, 0, shiftClick ? ClickType.QUICK_MOVE : ClickType.PICKUP, mc.player);
+    }
 }

@@ -196,9 +196,9 @@ public class StashMover extends ToggleableModule {
                     if (InventoryUtils.findItem(Items.ENDER_PEARL, true, false) != -1) {
                         for (int i = 0; i < container.getContainerSize(); i++) {
                             if (!container.getItem(i).getItem().equals(Items.ENDER_PEARL)) {
-                                InventoryUtils.clickSlot(i, false);
-                                InventoryUtils.clickSlot(container.getContainerSize() + 36 - 8, false);
-                                InventoryUtils.clickSlot(i, false);
+                                InventoryUtil.clickSlot(i, false);
+                                InventoryUtil.clickSlot(container.getContainerSize() + 36 - 8, false);
+                                InventoryUtil.clickSlot(i, false);
                             }
                             chestTicks = 0;
                         }
@@ -231,7 +231,7 @@ public class StashMover extends ToggleableModule {
                         if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                         if (chestTicks < chestDelay.getValue()) return;
 
-                        InventoryUtils.clickSlot(i, true);
+                        InventoryUtil.clickSlot(i, true);
                         chestTicks = 0;
                     }
 
@@ -264,7 +264,7 @@ public class StashMover extends ToggleableModule {
                             if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                             if (chestTicks < chestDelay.getValue()) return;
 
-                            InventoryUtils.clickSlot(i, true);
+                            InventoryUtil.clickSlot(i, true);
                             chestTicks = 0;
                         }
                         return;
@@ -338,7 +338,7 @@ public class StashMover extends ToggleableModule {
                         if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                         if (chestTicks < chestDelay.getValue()) return;
 
-                        InventoryUtils.clickSlot(i, true);
+                        InventoryUtil.clickSlot(i, true);
                         chestTicks = 0;
                     }
                 }
@@ -360,7 +360,7 @@ public class StashMover extends ToggleableModule {
                         if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                         if (chestTicks < chestDelay.getValue()) return;
 
-                        InventoryUtils.clickSlot(i, true);
+                        InventoryUtil.clickSlot(i, true);
                         chestTicks = 0;
                     }
 
