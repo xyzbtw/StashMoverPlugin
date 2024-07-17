@@ -11,8 +11,6 @@ public class MoverPlugin extends Plugin {
 		final StashMover stashMoverModule = new StashMover();
 		RusherHackAPI.getModuleManager().registerFeature(stashMoverModule);
 
-		final NewChunks newChunksModule = new NewChunks();
-		//RusherHackAPI.getModuleManager().registerFeature(newChunksModule);
 
 	}
 	
