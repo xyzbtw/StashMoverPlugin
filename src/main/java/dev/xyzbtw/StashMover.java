@@ -2,18 +2,21 @@ package dev.xyzbtw;
 
 import dev.xyzbtw.utils.BaritoneUtil;
 import dev.xyzbtw.utils.InventoryUtil;
-import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.PacketUtils;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
-import net.minecraft.world.item.FireworkRocketItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -25,7 +28,6 @@ import net.minecraft.world.phys.Vec3;
 import org.rusherhack.client.api.RusherHackAPI;
 import org.rusherhack.client.api.events.client.EventUpdate;
 import org.rusherhack.client.api.events.client.chat.EventAddChat;
-import org.rusherhack.client.api.events.client.chat.EventChatMessage;
 import org.rusherhack.client.api.events.network.EventPacket;
 import org.rusherhack.client.api.events.render.EventRender3D;
 import org.rusherhack.client.api.events.world.EventEntity;
@@ -50,7 +52,6 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -70,6 +71,7 @@ public class StashMover extends ToggleableModule {
     private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final BooleanSetting onlyShulkers = new BooleanSetting("OnlyShulkers", "Only steals shulkers", false).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
     private final StringSetting loadMessage = new StringSetting("LoadMessage", "The message that both accounts use.", "LOAD PEARL");
 
@@ -105,6 +107,7 @@ public class StashMover extends ToggleableModule {
                 this.mode,
                 this.distance,
                 this.chestDelay,
+                this.onlyShulkers,
                 this.useEchest,
                 this.autoDisable,
                 this.ignoreSingular,
@@ -263,6 +266,7 @@ public class StashMover extends ToggleableModule {
                         for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
                             if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                             if (chestTicks < chestDelay.getValue()) return;
+                            if(onlyShulkers.getValue() && !InventoryUtil.isSlotShulker(mc.player.containerMenu.getSlot(i).getItem().getItem())) continue;
 
                             InventoryUtil.clickSlot(i, true);
                             chestTicks = 0;
@@ -444,6 +448,7 @@ public class StashMover extends ToggleableModule {
 
         lagTimer.reset();
     }
+
 
     protected String getLookPos(String string) {
         Vec3 lookPos = null;
