@@ -266,7 +266,11 @@ public class StashMover extends ToggleableModule {
                         for (int i = 0; i < mc.player.containerMenu.slots.size() - 36; i++) {
                             if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                             if (chestTicks < chestDelay.getValue()) return;
-                            if(onlyShulkers.getValue() && !InventoryUtil.isSlotShulker(mc.player.containerMenu.getSlot(i).getItem().getItem())) continue;
+                            if(onlyShulkers.getValue()){
+                                if(mc.player.containerMenu.getSlot(i).getItem().getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
+                                    continue;
+                                }
+                            }
 
                             InventoryUtil.clickSlot(i, true);
                             chestTicks = 0;
