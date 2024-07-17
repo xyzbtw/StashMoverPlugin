@@ -71,7 +71,7 @@ public class StashMover extends ToggleableModule {
     private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting ignoreSingular = new BooleanSetting("IgnoreSingleChest", "Doesn't steal from single chests.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
-    private final BooleanSetting onlyShulkers = new BooleanSetting("OnlyShulkers", "Only steals shulkers", false).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    public final BooleanSetting onlyShulkers = new BooleanSetting("OnlyShulkers", "Only steals shulkers", false).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final StringSetting otherIGN = new StringSetting("OtherIGN", "The username of the other person that's moving stash", "xyzbtwballs");
     private final StringSetting loadMessage = new StringSetting("LoadMessage", "The message that both accounts use.", "LOAD PEARL");
 

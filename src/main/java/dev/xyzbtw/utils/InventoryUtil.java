@@ -1,5 +1,6 @@
 package dev.xyzbtw.utils;
 
+import dev.xyzbtw.MoverPlugin;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.util.datafix.fixes.ItemShulkerBoxColorFix;
@@ -8,6 +9,7 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -48,6 +50,11 @@ public class InventoryUtil {
         if(!(mc.player.containerMenu instanceof ChestMenu menu)) return false;
 
         for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
+            if(MoverPlugin.stashMoverModule.onlyShulkers.getValue()){
+                if(menu.getContainer().getItem(i).getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
+                    continue;
+                }
+            }
             if (!menu.getContainer().getItem(i).isEmpty()) {
                 return false;
             }
@@ -59,6 +66,11 @@ public class InventoryUtil {
         if(!(mc.player.containerMenu instanceof ChestMenu menu)) return false;
 
         for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
+            if(MoverPlugin.stashMoverModule.onlyShulkers.getValue()){
+                if(menu.getContainer().getItem(i).getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
+                    continue;
+                }
+            }
             if (menu.getContainer().getItem(i).isEmpty()) {
                 return false;
             }

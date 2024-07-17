@@ -5,14 +5,10 @@ import org.rusherhack.client.api.plugin.Plugin;
 
 
 public class MoverPlugin extends Plugin {
-	
+	public static final StashMover stashMoverModule = new StashMover();
 	@Override
 	public void onLoad() {
-		final StashMover stashMoverModule = new StashMover();
 		RusherHackAPI.getModuleManager().registerFeature(stashMoverModule);
-
-		final NewChunks newChunksModule = new NewChunks();
-		//RusherHackAPI.getModuleManager().registerFeature(newChunksModule);
 
 	}
 	
