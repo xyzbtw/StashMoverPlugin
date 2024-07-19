@@ -557,6 +557,7 @@ public class StashMover extends ToggleableModule {
 
             if (slot == -1) {
                 RusherHackAPI.getNotificationManager().chat("You don't have a pearl in your inventory, weird");
+                moverStatus = MOVER.WAIT_FOR_PEARL;
                 return;
             }
 
