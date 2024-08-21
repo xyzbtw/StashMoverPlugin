@@ -575,7 +575,7 @@ public class StashMover extends ToggleableModule {
 
     protected void throwPearl() {
         mc.player.setXRot(90);
-        mc.player.setYRot(RotationUtils.getRotations(pearlChestPosition.getCenter())[0]);
+        mc.player.setYRot(RotationUtils.getRotations(waterPos.getCenter())[0]);
 
         if (mc.hitResult == null) {
             System.out.println("SOMEHOW NULLLLLL");
