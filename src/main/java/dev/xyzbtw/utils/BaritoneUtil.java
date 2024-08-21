@@ -24,7 +24,4 @@ public class BaritoneUtil {
         baritone.getPathingBehavior().cancelEverything();
     }
 
-
-
-
 }

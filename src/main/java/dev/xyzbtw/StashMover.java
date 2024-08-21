@@ -267,7 +267,7 @@ public class StashMover extends ToggleableModule {
                             if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
                             if (chestTicks < chestDelay.getValue()) return;
                             if(onlyShulkers.getValue()){
-                                if(mc.player.containerMenu.getSlot(i).getItem().getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
+                                if(!(mc.player.containerMenu.getSlot(i).getItem().getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock)){
                                     continue;
                                 }
                             }
@@ -522,6 +522,7 @@ public class StashMover extends ToggleableModule {
                             || (contents.startsWith("From " + otherIGN.getValue()) && contents.contains(": " + loadMessage.getValue()))
                             || (contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers to you: " + loadMessage.getValue()))
             ) {
+                ticksPassed = -10;
                 String randomUUID = UUID.randomUUID().toString();
                 String shortUUID = randomUUID.substring(0, 8);
                 mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " RECEIVED MESSAGE " + shortUUID);

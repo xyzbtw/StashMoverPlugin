@@ -46,19 +46,32 @@ public class InventoryUtil {
         }
         return empty;
     }
-    public static boolean isChestEmpty(){
-        if(!(mc.player.containerMenu instanceof ChestMenu menu)) return false;
 
-        for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
-            if(MoverPlugin.stashMoverModule.onlyShulkers.getValue()){
-                if(menu.getContainer().getItem(i).getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
-                    continue;
+    public static boolean isChestEmpty() {
+        if (!(mc.player.containerMenu instanceof ChestMenu menu)) return false;
+
+
+        if (MoverPlugin.stashMoverModule.onlyShulkers.getValue()) {
+            boolean hasShulker = false;
+
+            for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
+                if (menu.getContainer().getItem(i).getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock) {
+                    hasShulker = true;
+                    break;
                 }
             }
+
+            if (!hasShulker) {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
             if (!menu.getContainer().getItem(i).isEmpty()) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -66,17 +79,13 @@ public class InventoryUtil {
         if(!(mc.player.containerMenu instanceof ChestMenu menu)) return false;
 
         for (int i = 0; i < menu.getContainer().getContainerSize(); i++) {
-            if(MoverPlugin.stashMoverModule.onlyShulkers.getValue()){
-                if(menu.getContainer().getItem(i).getItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof ShulkerBoxBlock){
-                    continue;
-                }
-            }
             if (menu.getContainer().getItem(i).isEmpty()) {
                 return false;
             }
         }
         return true;
     }
+
     public static void clickSlot(int slotId, boolean shiftClick) {
         if(mc.player == null || mc.gameMode == null) {
             return;
