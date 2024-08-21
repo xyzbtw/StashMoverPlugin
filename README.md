@@ -11,15 +11,18 @@ Mover
 --------
 
 Set a pearl in the same stasis chamber.
+
 Set pearlchest right next to stasis chamber using *stashmover pearlchest
+
 Set the chest where it's going to put everything into. Using *stashmover lootchest
 (it should have hoppers under it to go into other chests)
 
-Set chamber position (top of chamber) using *stashmover water
+Set water position (just stand in the water) using *stashmover water
+Set chamber position using *stashmover chamber
 
 /kill and enable the module at the place where you're moving it FROM
 
-Video instructions:
+Video instructions (outdated):
 https://youtu.be/gfnNFyRQavA
 
 Testing videos

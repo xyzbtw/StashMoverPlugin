@@ -126,6 +126,8 @@ public class StashMover extends ToggleableModule {
         super.onEnable();
         moverStatus = MOVER.LOOT;
         loaderStatus = LOADER.WAITING;
+        filledEchest = false;
+        flickedDoor = false;
         sentMessage = false;
     }
 
@@ -164,8 +166,12 @@ public class StashMover extends ToggleableModule {
                 case SEND_LOAD_PEARL_MSG -> {
                     if (!sentMessage) {
                         String randomUUID = UUID.randomUUID().toString();
-                        String shortUUID = randomUUID.substring(0, 8);
-                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + loadMessage.getValue() + " " + shortUUID);
+                        String secondRandomUUID2 = UUID.randomUUID().toString();
+
+                        String shortUUID = randomUUID.substring(0, 4);
+                        String secondShortUUID = secondRandomUUID2.substring(0, 4);
+
+                        mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + shortUUID + loadMessage.getValue() + " " + secondShortUUID);
                         ticksPassed = -40;
                     }
                 }
@@ -314,15 +320,29 @@ public class StashMover extends ToggleableModule {
                     mc.player.closeContainer();
                     ticksPassed = -5; //delay between each chest i guess
 
-                    if (new HashSet<>(blacklistChests).containsAll(WorldUtils.getBlockEntities(true)
-                            .stream()
-                            .filter(e -> e instanceof ChestBlockEntity)
-                            .filter(e -> !e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE) || !ignoreSingular.getValue())
-                            .map(BlockEntity::getBlockPos).collect(Collectors.toSet()))) {
+                    Set<BlockPos> blacklistChestsSet = new HashSet<>(blacklistChests);
+                    boolean ignoreSingularValue = ignoreSingular.getValue();
+                    boolean allBlacklisted = true;
+
+                    for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
+                        if (e instanceof ChestBlockEntity) {
+                            ChestType chestType = e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE);
+                            if (chestType.equals(ChestType.SINGLE) && ignoreSingularValue) {
+                                continue;
+                            }
+                            if (!blacklistChestsSet.contains(e.getBlockPos())) {
+                                allBlacklisted = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (allBlacklisted) {
                         moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
                         disableOnceTP = true;
                         return;
                     }
+
                     return;
 
                 }
@@ -367,7 +387,7 @@ public class StashMover extends ToggleableModule {
 
                         InventoryUtil.clickSlot(i, true);
                         chestTicks = 0;
-                    }
+                }
                 }
                 case ECHEST_FILL -> {
                     if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
@@ -548,23 +568,29 @@ public class StashMover extends ToggleableModule {
 
         if(mode.getValue().equals(MODES.LOADER)) {
             if (
-                    (contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers: " + loadMessage.getValue()))
-                            || (contents.startsWith("From " + otherIGN.getValue()) && contents.contains(": " + loadMessage.getValue()))
-                            || (contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers to you: " + loadMessage.getValue()))
+                    (contents.startsWith(otherIGN.getValue() + " whispers: ") && contents.contains(loadMessage.getValue()))
+                            || (contents.startsWith("From " + otherIGN.getValue() + ": ") && contents.contains(loadMessage.getValue()))
+                            || (contents.startsWith(otherIGN.getValue() + " whispers to you: ") && contents.contains(loadMessage.getValue()))
             ) {
                 ticksPassed = -10;
                 String randomUUID = UUID.randomUUID().toString();
-                String shortUUID = randomUUID.substring(0, 8);
-                mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " RECEIVED MESSAGE " + shortUUID);
+                String shortUUID = randomUUID.substring(0, 4);
+
+                String secondRandomUUID = UUID.randomUUID().toString();
+                String secondShortUUID = randomUUID.substring(0, 4);
+
+
+
+                mc.player.connection.sendCommand("msg " + otherIGN.getValue() + " " + shortUUID + " RECEIVED MESSAGE " + secondShortUUID);
                 loaderStatus = LOADER.LOAD_PEARL;
             }
         }
 
         if(mode.getValue().equals(MODES.MOVER)) {
             if(
-                    contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers: RECEIVED MESSAGE")
+                    contents.startsWith(otherIGN.getValue() + " whispers:") && contents.contains(" RECEIVED MESSAGE")
                     || contents.startsWith("From " + otherIGN.getValue() + ": ") && contents.contains("RECEIVED MESSAGE")
-                    || contents.startsWith(otherIGN.getValue()) && contents.contains(" whispers to you: RECEIVED MESSAGE")
+                    || contents.startsWith(otherIGN.getValue() + " whispers to you:") && contents.contains(" RECEIVED MESSAGE")
             )
             {
                 sentMessage = true;
