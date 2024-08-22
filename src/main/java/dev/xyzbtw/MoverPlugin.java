@@ -9,11 +9,12 @@ public class MoverPlugin extends Plugin {
 	@Override
 	public void onLoad() {
 		RusherHackAPI.getModuleManager().registerFeature(stashMoverModule);
-
+		stashMoverModule.blacklistChests.clear();
 	}
 	
 	@Override
 	public void onUnload() {
+		stashMoverModule.blacklistChests.clear();
 		this.getLogger().info("StashMover plugin successfully" + " unloaded!");
 	}
 

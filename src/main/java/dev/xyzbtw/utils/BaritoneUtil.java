@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.Block;
 
 public class BaritoneUtil {
 
-    static IBaritone baritone = BaritoneAPI.getProvider().getPrimaryBaritone();
+    public static IBaritone baritone = BaritoneAPI.getProvider().getPrimaryBaritone();
     public static void goTo(BlockPos pos){
         if(!baritone.getPathingBehavior().hasPath()){
             baritone.getCustomGoalProcess().setGoalAndPath(new GoalGetToBlock(pos));
@@ -19,6 +19,9 @@ public class BaritoneUtil {
         if(!baritone.getPathingBehavior().hasPath()){
             baritone.getGetToBlockProcess().getToBlock(block);
         }
+    }
+    public static boolean isBaritonePathing(){
+        return baritone.getPathingBehavior().isPathing();
     }
     public static void stopBaritone(){
         baritone.getPathingBehavior().cancelEverything();
