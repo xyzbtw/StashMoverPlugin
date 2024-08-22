@@ -10,6 +10,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Items;
@@ -207,12 +208,13 @@ public class StashMover extends ToggleableModule {
                         openChest(pearlChestPosition);
                         return;
                     }
-                    Container container = menu.getContainer();
 
+                    Container container = menu.getContainer();
                     chestTicks++;
                     if (InventoryUtils.findItem(Items.ENDER_PEARL, true, false) != -1) {
                         for (int i = 0; i < container.getContainerSize(); i++) {
                             if (!container.getItem(i).getItem().equals(Items.ENDER_PEARL)) {
+                                if (mc.player.containerMenu instanceof InventoryMenu) return;
                                 InventoryUtil.clickSlot(i, false);
                                 InventoryUtil.clickSlot(container.getContainerSize() + 36 - 8, false);
                                 InventoryUtil.clickSlot(i, false);
@@ -480,6 +482,7 @@ public class StashMover extends ToggleableModule {
                         || moverStatus.equals(MOVER.PUT_BACK_PEARLS)
 
                 ) {
+                    if(waterPos.distToCenterSqr(packet.getX(), packet.getY(), packet.getZ()) > 1) return;
                     BaritoneUtil.stopBaritone();
                     if(mc.player.containerMenu instanceof ChestMenu )
                         mc.player.closeContainer();
