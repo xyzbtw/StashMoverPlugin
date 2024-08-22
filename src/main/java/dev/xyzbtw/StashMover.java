@@ -4,26 +4,19 @@ import dev.xyzbtw.utils.BaritoneUtil;
 import dev.xyzbtw.utils.InventoryUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.Container;
-import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEnderpearl;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -54,7 +47,6 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.stream.Collectors;
 
 /**
  * A module that moves stashes for you
@@ -85,7 +77,6 @@ public class StashMover extends ToggleableModule {
     private MOVER moverStatus = MOVER.LOOT;
     private LOADER loaderStatus = LOADER.WAITING;
     boolean hasThrownPearl = false;
-    boolean flickedDoor = false;
     int chestTicks = 0;
     int ticksPassed = 0;
     Vec3 chamber;
@@ -94,6 +85,7 @@ public class StashMover extends ToggleableModule {
     boolean sentMessage = false;
     boolean filledEchest = false;
     boolean disableOnceTP = false;
+    float shulksMoved = 0;
     Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
     public static BlockPos LOADER_BACK_POSITION,
             pearlChestPosition,
@@ -127,7 +119,6 @@ public class StashMover extends ToggleableModule {
         moverStatus = MOVER.LOOT;
         loaderStatus = LOADER.WAITING;
         filledEchest = false;
-        flickedDoor = false;
         sentMessage = false;
     }
 
@@ -176,8 +167,9 @@ public class StashMover extends ToggleableModule {
                     }
                 }
                 case WAIT_FOR_PEARL -> {
+                    BaritoneUtil.goTo(waterPos);
 
-                    if (!flickedDoor){
+                    if (!mc.level.getBlockState(BlockPos.containing(chamber)).getValue(TrapDoorBlock.OPEN)){
                         float[] rotations = RotationUtils.getRotations(chamber);
 
                         mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], mc.player.onGround()));
@@ -200,7 +192,6 @@ public class StashMover extends ToggleableModule {
 
                     mc.player.closeContainer();
                     moverStatus = MOVER.THROWING_PEARL;
-                    flickedDoor = false;
                 }
                 case THROWING_PEARL -> {
                     BaritoneUtil.goTo(waterPos);
@@ -210,7 +201,6 @@ public class StashMover extends ToggleableModule {
                     BaritoneUtil.stopBaritone();
                     moverStatus = MOVER.PUT_BACK_PEARLS;
                     hasThrownPearl = false;
-                    flickedDoor = false;
                 }
                 case PUT_BACK_PEARLS -> {
                     if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
@@ -232,7 +222,6 @@ public class StashMover extends ToggleableModule {
                         return;
                     }
                     mc.player.closeContainer();
-                    flickedDoor = false;
                     moverStatus = MOVER.WALKING_TO_CHEST;
 
                 }
@@ -302,40 +291,29 @@ public class StashMover extends ToggleableModule {
                         }
                         return;
                     }
+                    mc.player.closeContainer();
 
                     blacklistChests.add(currentChest);
 
-                    for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
-                        if (e instanceof ChestBlockEntity chest) {
-                            if (blacklistChests.contains(e.getBlockPos())) {
-                                if (!chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) {
-                                    Direction facing = ChestBlock.getConnectedDirection(chest.getBlockState());
-                                    blacklistChests.add(chest.getBlockPos().relative(facing));
-                                }
-                            }
-                        }
-                    }
-
-
-                    mc.player.closeContainer();
-                    ticksPassed = -5; //delay between each chest i guess
-
-                    Set<BlockPos> blacklistChestsSet = new HashSet<>(blacklistChests);
                     boolean ignoreSingularValue = ignoreSingular.getValue();
-                    boolean allBlacklisted = true;
 
-                    for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
-                        if (e instanceof ChestBlockEntity) {
-                            ChestType chestType = e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE);
-                            if (chestType.equals(ChestType.SINGLE) && ignoreSingularValue) {
-                                continue;
-                            }
-                            if (!blacklistChestsSet.contains(e.getBlockPos())) {
-                                allBlacklisted = false;
-                                break;
-                            }
-                        }
-                    }
+                    boolean allBlacklisted = WorldUtils.getBlockEntities(true)
+                            .stream()
+                            .filter(e -> e instanceof ChestBlockEntity)
+                            .map(e -> (ChestBlockEntity) e)
+                            .noneMatch(chest -> {
+                                ChestType chestType = chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE);
+                                if (chestType.equals(ChestType.SINGLE) && ignoreSingularValue) {
+                                    return true;
+                                }
+                                if (blacklistChests.contains(chest.getBlockPos())) {
+                                    if (!chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE).equals(ChestType.SINGLE)) {
+                                        Direction facing = ChestBlock.getConnectedDirection(chest.getBlockState());
+                                        blacklistChests.add(chest.getBlockPos().relative(facing));
+                                    }
+                                }
+                                return false;
+                            });
 
                     if (allBlacklisted) {
                         moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
@@ -349,8 +327,8 @@ public class StashMover extends ToggleableModule {
                 case WALKING_TO_CHEST -> {
 
                     if(mc.player.isDeadOrDying()) {
-                        mc.player.respawn();
                         moverStatus = MOVER.LOOT;
+                        mc.player.respawn();
                         return;
                     }
 
@@ -387,7 +365,8 @@ public class StashMover extends ToggleableModule {
 
                         InventoryUtil.clickSlot(i, true);
                         chestTicks = 0;
-                }
+                        shulksMoved += 1;
+                    }
                 }
                 case ECHEST_FILL -> {
                     if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
@@ -493,10 +472,19 @@ public class StashMover extends ToggleableModule {
 
         lagTimer.reset();
 
-        if(event.getPacket() instanceof ClientboundBlockUpdatePacket packet) {
-            if(packet.getBlockState().getBlock() instanceof TrapDoorBlock block){
-                if(packet.getBlockState().getValue(TrapDoorBlock.OPEN)) {
-                    flickedDoor = true;
+        if(event.getPacket() instanceof ClientboundPlayerPositionPacket packet) {
+            if(mode.getValue().equals(MODES.MOVER)) {
+                if(     moverStatus.equals(MOVER.ECHEST_FILL)
+                        || moverStatus.equals(MOVER.THROWING_PEARL)
+                        || moverStatus.equals(MOVER.WALKING_TO_CHEST)
+                        || moverStatus.equals(MOVER.PUT_BACK_PEARLS)
+
+                ) {
+                    BaritoneUtil.stopBaritone();
+                    if(mc.player.containerMenu instanceof ChestMenu )
+                        mc.player.closeContainer();
+                    moverStatus = MOVER.WAIT_FOR_PEARL;
+                    ticksPassed = -3;
                 }
             }
         }
@@ -527,9 +515,10 @@ public class StashMover extends ToggleableModule {
 
     @Override
     public String getMetadata() {
+        String dubsMoved = "Dubs: " + Math.floor(shulksMoved / 54);
         return switch (mode.getValue()){
             case LOADER -> loaderStatus.name();
-            case MOVER -> moverStatus.name();
+            case MOVER -> moverStatus.name() + " " + dubsMoved;
         };
     }
 
