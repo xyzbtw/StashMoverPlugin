@@ -89,6 +89,7 @@ public class StashMover extends ToggleableModule {
     boolean filledEchest = false;
     boolean disableOnceTP = false;
     boolean checkedThisLoop = false;
+    boolean reconnectThing = false;
     private BlockPos previousPos = null;
     private boolean hasMoved = false;
     float shulksMoved = 0;
@@ -169,9 +170,24 @@ public class StashMover extends ToggleableModule {
             return;
         }
 
+        if (reconnectThing){
+            int minX = (int) mc.player.getX() - 24;
+            int maxX = (int) mc.player.getX() + 24;
+            int minZ = (int) mc.player.getZ() - 24;
+            int maxZ = (int) mc.player.getZ() + 24;
+
+            int randomX = minX + new Random().nextInt(maxX - minX + 1);
+            int randomZ = minZ + new Random().nextInt(maxZ - minZ + 1);
+
+            BaritoneUtil.goTo(new BlockPos(randomX, (int) mc.player.getY(), randomZ));
+            reconnectThing = false;
+            return;
+        }
+
         ticksPassed++;
         if (ticksPassed < 2) return;
         ticksPassed = 0;
+
 
         if (mc.player.getDeltaMovement().x != 0 || mc.player.getDeltaMovement().z != 0) {
             noMoveTimer.reset();
@@ -245,7 +261,7 @@ public class StashMover extends ToggleableModule {
                 case PUT_BACK_PEARLS -> {
                     if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
                         openChest(pearlChestPosition);
-                        ticksPassed = -5;
+                        ticksPassed = -3;
                         return;
                     }
 
@@ -267,14 +283,13 @@ public class StashMover extends ToggleableModule {
                                 InventoryUtils.clickSlot(pearlSlot, false);
                                 InventoryUtils.clickSlot(i, false);
                                 mc.player.closeContainer();
+                                moverStatus = MOVER.WALKING_TO_CHEST;
                                 break;
                             }
                             chestTicks = 0;
                         }
                         return;
                     }
-                    mc.player.closeContainer();
-                    moverStatus = MOVER.WALKING_TO_CHEST;
 
                 }
                 case ECHEST_LOOT -> {
@@ -553,7 +568,7 @@ public class StashMover extends ToggleableModule {
                             mc.player.closeContainer();
                         moverStatus = MOVER.WAIT_FOR_PEARL;
                         System.out.println("ON REMOVE ENTITY!!");
-                        ticksPassed = -3;
+                        ticksPassed = 0;
                     }
                 }
             }
@@ -565,6 +580,10 @@ public class StashMover extends ToggleableModule {
         if (mc.player == null || mc.level == null) return;
 
         lagTimer.reset();
+        if(event.getPacket() instanceof ClientboundDisconnectPacket){
+            reconnectThing = true;
+            ticksPassed = -600;
+        }
     }
 
 
