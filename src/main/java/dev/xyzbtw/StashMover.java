@@ -4,6 +4,7 @@ import dev.xyzbtw.utils.BaritoneUtil;
 import dev.xyzbtw.utils.InventoryUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -88,6 +89,8 @@ public class StashMover extends ToggleableModule {
     boolean filledEchest = false;
     boolean disableOnceTP = false;
     boolean checkedThisLoop = false;
+    private BlockPos previousPos = null;
+    private boolean hasMoved = false;
     float shulksMoved = 0;
     public Set<BlockPos> stealChests = new CopyOnWriteArraySet<>();
     public static BlockPos LOADER_BACK_POSITION,
@@ -160,6 +163,12 @@ public class StashMover extends ToggleableModule {
 
         if (lagTimer.passed(1000)) return;
 
+        if(mc.player.isDeadOrDying()) {
+            moverStatus = MOVER.LOOT;
+            mc.player.respawn();
+            return;
+        }
+
         ticksPassed++;
         if (ticksPassed < 2) return;
         ticksPassed = 0;
@@ -167,6 +176,18 @@ public class StashMover extends ToggleableModule {
         if (mc.player.getDeltaMovement().x != 0 || mc.player.getDeltaMovement().z != 0) {
             noMoveTimer.reset();
         }
+        BlockPos currentPos = mc.player.blockPosition();
+
+        if(previousPos != null){
+            hasMoved = Math.abs(currentPos.getX() - previousPos.getX()) > 3 ||
+                    Math.abs(currentPos.getY() - previousPos.getY()) > 3 ||
+                    Math.abs(currentPos.getZ() - previousPos.getZ()) > 3;
+
+        }
+
+        previousPos = currentPos;
+
+
 
         if (mode.getValue().equals(MODES.MOVER)) {
             switch (moverStatus) {
@@ -186,14 +207,16 @@ public class StashMover extends ToggleableModule {
                 case WAIT_FOR_PEARL -> {
                     BaritoneUtil.goTo(waterPos);
 
-                    if (!mc.level.getBlockState(BlockPos.containing(chamber)).getValue(TrapDoorBlock.OPEN)){
-                        float[] rotations = RotationUtils.getRotations(chamber);
+                    if(mc.level.getBlockState(BlockPos.containing(chamber)).getBlock() instanceof TrapDoorBlock) {
+                        if (!mc.level.getBlockState(BlockPos.containing(chamber)).getValue(TrapDoorBlock.OPEN)) {
+                            float[] rotations = RotationUtils.getRotations(chamber);
 
-                        mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], mc.player.onGround()));
-                        RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
+                            mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], mc.player.onGround()));
+                            RusherHackAPI.interactions().useBlock(BlockPos.containing(chamber), InteractionHand.MAIN_HAND, true, false);
 
-                        ticksPassed = -10;
-                        return;
+                            ticksPassed = -10;
+                            return;
+                        }
                     }
 
                     sentMessage = false;
@@ -222,6 +245,7 @@ public class StashMover extends ToggleableModule {
                 case PUT_BACK_PEARLS -> {
                     if (!(mc.player.containerMenu instanceof ChestMenu menu)) {
                         openChest(pearlChestPosition);
+                        ticksPassed = -5;
                         return;
                     }
 
@@ -242,6 +266,8 @@ public class StashMover extends ToggleableModule {
                                 int pearlSlot = InventoryUtils.findItemHotbar(Items.ENDER_PEARL) + mc.player.containerMenu.slots.size() - 9;
                                 InventoryUtils.clickSlot(pearlSlot, false);
                                 InventoryUtils.clickSlot(i, false);
+                                mc.player.closeContainer();
+                                break;
                             }
                             chestTicks = 0;
                         }
@@ -281,10 +307,6 @@ public class StashMover extends ToggleableModule {
                     return;
                 }
                 case LOOT -> {
-                    if (mc.player.isDeadOrDying()) {
-                        mc.player.respawn();
-                        return;
-                    }
 
                     if (InventoryUtils.isInventoryFull()) {
                         moverStatus = MOVER.ECHEST_LOOT;
@@ -369,12 +391,6 @@ public class StashMover extends ToggleableModule {
                 }
                 case WALKING_TO_CHEST -> {
 
-                    if(mc.player.isDeadOrDying()) {
-                        moverStatus = MOVER.LOOT;
-                        mc.player.respawn();
-                        return;
-                    }
-
                     if (mc.player.distanceToSqr(chestForLoot.getX(), chestForLoot.getY(), chestForLoot.getZ()) > 9) {
                         BaritoneUtil.goTo(freeBlockAroundChest(chestForLoot));
                         return;
@@ -388,7 +404,13 @@ public class StashMover extends ToggleableModule {
                         }
 
                         mc.player.connection.sendCommand("kill");
+                        ticksPassed = -10;
 
+                        return;
+                    }
+
+                    if (currentChest != null && !currentChest.equals(chestForLoot) && mc.player.containerMenu instanceof ChestMenu) {
+                        mc.player.closeContainer();
                         return;
                     }
 
@@ -399,8 +421,9 @@ public class StashMover extends ToggleableModule {
 
                     chestTicks++;
                     for (int i = mc.player.containerMenu.slots.size() - 36; i < mc.player.containerMenu.slots.size(); i++) {
-                        if (InventoryUtil.isChestFull() && autoDisable.getValue()) {
-                            this.toggle();
+                        if (InventoryUtil.isChestFull()) {
+                            if(autoDisable.getValue())
+                                this.toggle();
                             return;
                         }
                         if (!mc.player.containerMenu.getSlot(i).hasItem()) continue;
@@ -486,6 +509,7 @@ public class StashMover extends ToggleableModule {
             {
 
                 moverStatus = MOVER.WAIT_FOR_PEARL;
+                System.out.println("ON ADD ENTITY!!");
                 ticksPassed = -3;
 
                 if(disableOnceTP){
@@ -510,30 +534,37 @@ public class StashMover extends ToggleableModule {
             }
         }
     }
+    @Subscribe
+    private void onRemoveEntity(EventEntity.Remove event) {
+        if(mc.player.isDeadOrDying()) {
+            return;
+        }
+        if(mode.getValue().equals(MODES.MOVER)) {
+            if (event.getEntity() instanceof ThrownEnderpearl) {
+                if (mode.getValue().equals(MODES.MOVER)) {
+                    if (moverStatus.equals(MOVER.ECHEST_FILL)
+                            || moverStatus.equals(MOVER.THROWING_PEARL)
+                            || moverStatus.equals(MOVER.WALKING_TO_CHEST)
+                            || moverStatus.equals(MOVER.PUT_BACK_PEARLS)
+
+                    ) {
+                        BaritoneUtil.stopBaritone();
+                        if (mc.player.containerMenu instanceof ChestMenu)
+                            mc.player.closeContainer();
+                        moverStatus = MOVER.WAIT_FOR_PEARL;
+                        System.out.println("ON REMOVE ENTITY!!");
+                        ticksPassed = -3;
+                    }
+                }
+            }
+        }
+    }
 
     @Subscribe
     public void onPacketReceive(EventPacket.Receive event) {
         if (mc.player == null || mc.level == null) return;
 
         lagTimer.reset();
-
-        if(event.getPacket() instanceof ClientboundPlayerPositionPacket packet) {
-            if(mode.getValue().equals(MODES.MOVER)) {
-                if(     moverStatus.equals(MOVER.ECHEST_FILL)
-                        || moverStatus.equals(MOVER.THROWING_PEARL)
-                        || moverStatus.equals(MOVER.WALKING_TO_CHEST)
-                        || moverStatus.equals(MOVER.PUT_BACK_PEARLS)
-
-                ) {
-                    if(waterPos.distToCenterSqr(packet.getX(), waterPos.getY(), packet.getZ()) > 1) return;
-                    BaritoneUtil.stopBaritone();
-                    if(mc.player.containerMenu instanceof ChestMenu )
-                        mc.player.closeContainer();
-                    moverStatus = MOVER.WAIT_FOR_PEARL;
-                    ticksPassed = -3;
-                }
-            }
-        }
     }
 
 
@@ -652,6 +683,7 @@ public class StashMover extends ToggleableModule {
             if (slot == -1) {
                 RusherHackAPI.getNotificationManager().chat("You don't have a pearl in your inventory, weird");
                 moverStatus = MOVER.WAIT_FOR_PEARL;
+                System.out.println("ON THROW PEARL!!");
                 return;
             }
 
@@ -672,6 +704,7 @@ public class StashMover extends ToggleableModule {
 
         float[] rotations = RotationUtils.getRotations(pos.getCenter());
 
+        RusherHackAPI.getRotationManager().updateRotation(pos);
         mc.player.connection.send(new ServerboundMovePlayerPacket.Rot(rotations[0], rotations[1], mc.player.onGround()));
         RusherHackAPI.interactions().useBlock(pos, InteractionHand.MAIN_HAND, true, false);
     }
