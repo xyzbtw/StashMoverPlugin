@@ -396,6 +396,7 @@ public class StashMover extends ToggleableModule {
                                 }
                             }
                         }
+                        checkedThisLoop = true;
 
                         if (allBlacklisted) {
                             moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
