@@ -382,17 +382,20 @@ public class StashMover extends ToggleableModule {
 
                     if(!checkedThisLoop) {
                         boolean ignoreSingularValue = ignoreSingular.getValue();
+                        boolean allBlacklisted = true;
 
-                        boolean allBlacklisted = WorldUtils.getBlockEntities(true)
-                                .stream()
-                                .filter(e -> e instanceof ChestBlockEntity)
-                                .map(e -> (ChestBlockEntity) e)
-                                .noneMatch(chest -> {
-                                    ChestType chestType = chest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE);
-                                    return chestType.equals(ChestType.SINGLE) && ignoreSingularValue;
-                                });
-
-                        checkedThisLoop = true;
+                        for (BlockEntity e : WorldUtils.getBlockEntities(true)) {
+                            if (e instanceof ChestBlockEntity) {
+                                ChestType chestType = e.getBlockState().getValue(BlockStateProperties.CHEST_TYPE);
+                                if (chestType.equals(ChestType.SINGLE) && ignoreSingularValue) {
+                                    continue;
+                                }
+                                if (!blacklistChests.contains(e.getBlockPos())) {
+                                    allBlacklisted = false;
+                                    break;
+                                }
+                            }
+                        }
 
                         if (allBlacklisted) {
                             moverStatus = MOVER.SEND_LOAD_PEARL_MSG;
