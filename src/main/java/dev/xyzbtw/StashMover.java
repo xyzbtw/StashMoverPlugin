@@ -660,6 +660,7 @@ public class StashMover extends ToggleableModule {
                     (contents.startsWith(otherIGN.getValue() + " whispers: ") && contents.contains(loadMessage.getValue()))
                             || (contents.startsWith("From " + otherIGN.getValue() + ": ") && contents.contains(loadMessage.getValue()))
                             || (contents.startsWith(otherIGN.getValue() + " whispers to you: ") && contents.contains(loadMessage.getValue()))
+                            || (contents.startsWith("Message from " + otherIGN.getValue() + ": ") && contents.contains(loadMessage.getValue()))
             ) {
                 ticksPassed = -10;
                 String randomUUID = UUID.randomUUID().toString();
@@ -677,9 +678,10 @@ public class StashMover extends ToggleableModule {
 
         if(mode.getValue().equals(MODES.MOVER)) {
             if(
-                    contents.startsWith(otherIGN.getValue() + " whispers:") && contents.contains(" RECEIVED MESSAGE")
+                    contents.startsWith(otherIGN.getValue() + " whispers:") && contents.contains("RECEIVED MESSAGE")
                     || contents.startsWith("From " + otherIGN.getValue() + ": ") && contents.contains("RECEIVED MESSAGE")
-                    || contents.startsWith(otherIGN.getValue() + " whispers to you:") && contents.contains(" RECEIVED MESSAGE")
+                    || contents.startsWith(otherIGN.getValue() + " whispers to you:") && contents.contains("RECEIVED MESSAGE")
+                            || (contents.startsWith("Message from " + otherIGN.getValue() + ": ") && contents.contains("RECEIVED MESSAGE"))
             )
             {
                 sentMessage = true;
