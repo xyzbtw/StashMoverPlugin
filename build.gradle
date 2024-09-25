@@ -41,7 +41,7 @@ dependencies {
         parchment("org.parchmentmc.data:parchment-1.20.1:2023.07.30@zip")
     }
 
-    modCompileOnly files("libs/baritone-api.jar")
+    modCompileOnly files("libs/baritone-api-fabric-${project.minecraft_version}.jar")
 
     //rusherhack api
     rusherhackApi "org.rusherhack:rusherhack-api:${project.minecraft_version}-SNAPSHOT"
@@ -80,6 +80,27 @@ java {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
     archivesBaseName = project.archives_base_name
+}
+tasks.register('BuildAndCopyJar', Exec) {
+    dependsOn 'build'
+    dependsOn 'jar'
+    commandLine 'cmd',
+            '/c',
+            'copy',
+            '/Y',
+            'build\\libs\\stashmover-release.jar',
+            'C:\\Users\\xyzbtw\\AppData\\Roaming\\PrismLauncher\\instances\\1.20.4\\.minecraft\\rusherhack\\plugins'
+
+    println "Copied jar file to destination folder with replacement"
+}
+tasks.register('buildAndCopyBoth', Exec) {
+    dependsOn 'BuildAndCopyJar'
+    commandLine 'cmd',
+            '/c',
+            'copy',
+            '/Y',
+            'build\\libs\\stashmover-release.jar',
+            'C:\\Users\\xyzbtw\\AppData\\Roaming\\PrismLauncher\\instances\\1.20.4(1)\\.minecraft\\rusherhack\\plugins'
 }
 
 jar {
