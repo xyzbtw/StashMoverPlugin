@@ -528,7 +528,6 @@ public class StashMover extends ToggleableModule {
             {
 
                 moverStatus = MOVER.WAIT_FOR_PEARL;
-                System.out.println("ON ADD ENTITY!!");
                 ticksPassed = -3;
 
                 if(disableOnceTP){
@@ -571,7 +570,6 @@ public class StashMover extends ToggleableModule {
                         if (mc.player.containerMenu instanceof ChestMenu)
                             mc.player.closeContainer();
                         moverStatus = MOVER.WAIT_FOR_PEARL;
-                        System.out.println("ON REMOVE ENTITY!!");
                         ticksPassed = 0;
                     }
                 }
@@ -708,7 +706,6 @@ public class StashMover extends ToggleableModule {
             if (slot == -1) {
                 RusherHackAPI.getNotificationManager().chat("You don't have a pearl in your inventory, weird");
                 moverStatus = MOVER.WAIT_FOR_PEARL;
-                System.out.println("ON THROW PEARL!!");
                 return;
             }
 
