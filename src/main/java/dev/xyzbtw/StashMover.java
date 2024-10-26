@@ -64,6 +64,7 @@ public class StashMover extends ToggleableModule {
      */
     private final EnumSetting<MODES> mode = new EnumSetting<>("Mode", MODES.MOVER);
     private final NumberSetting<Integer> chestDelay = new NumberSetting<>("ChestDelay", "Delay between chest clicks", 1, 0, 10).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
+    private final NumberSetting<Integer> ticks = new NumberSetting<>("Ticks", "Tick delay between actions.", 2, 2, 20).setVisibility(() -> mode.getValue() == MODES.MOVER);
     private final NumberSetting<Integer> distance = new NumberSetting<>("ChestDistance", "Distance between you and lootchests", 100, 10, 1000).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting autoDisable = new BooleanSetting("AutoDisable", "If lootchest is full.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
     private final BooleanSetting useEchest = new BooleanSetting("UseEChest", "uses echest.", true).setVisibility(() -> mode.getValue().equals(MODES.MOVER));
@@ -185,7 +186,7 @@ public class StashMover extends ToggleableModule {
         }
 
         ticksPassed++;
-        if (ticksPassed < 2) return;
+        if (ticksPassed < ticks.getValue()) return;
         ticksPassed = 0;
 
 
